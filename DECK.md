@@ -14,7 +14,11 @@ Default theme is **atelier**: **wood chassis · brass fittings · paper work**. 
 | `~/Projects/design-elevation/CRAFT-DESK-ELEVATION.md` | Material system, tokens, surface direction, acceptance checklist |
 | `~/Projects/design-elevation/CRAFT-DESK-100-PLAN.md` | Sibling plan draft (mirrored into `docs/craft-desk-100-plan.md`) |
 
-**Best next move:** Phase **A1** — commit the craft stack so Atelier is durable.
+**Craft stack sealed (A1):** `139949f` (+ follow-ups `ff96cc3`, `fe5e6ca` for desk lastHash/tests).  
+**Settings drift (A3):** server + live `settings.theme=atelier` (`craftThemeAligned`).  
+**desk.json (B1–B3 core):** `lib/desk.ts` + client `desk-furniture` dual-write; live `~/.grok-remote/desk.json` via `GET/PATCH /api/desk`.  
+
+**Best next move:** Phase **B4** — routing restore: empty hash → `lastHash`, restore `lastAgentId` selection + chat tab / tools collapse on cold open.
 
 - Tokens: `src/style.css` (`:root` + `[data-theme="atelier"]`) — wood/paper/ink/brass scales, warm shadows, lamp vignette.
 - Craft shell: `src/styles/premium.css` — trays, paper peek, brass CTAs, rail, chat paper stream, composer paper field.
