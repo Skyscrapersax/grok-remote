@@ -58,6 +58,10 @@ function ensureRoot(): void {
   fs.mkdirSync(ROOT, { recursive: true });
 }
 
+function isHash(h: unknown): h is string {
+  return typeof h === 'string' && h.startsWith('#/') && h.length > 2 && h !== '#/';
+}
+
 function normalize(raw: Partial<DeskState> | null | undefined): DeskState {
   const r = raw && typeof raw === 'object' ? raw : {};
   const termTabs = Array.isArray(r.termTabs)
@@ -91,10 +95,14 @@ function normalize(raw: Partial<DeskState> | null | undefined): DeskState {
     if (!Object.keys(dash).length) dash = undefined;
   }
 
+  // Only accept real surface hashes (#/deck, #/dash, …) — never empty "#/"
+  const lastHash = isHash(r.lastHash) ? r.lastHash : undefined;
+
   return {
     ...DEFAULTS,
     ...r,
     version: VERSION,
+    lastHash,
     termTabs,
     termLastKind: typeof r.termLastKind === 'string' ? r.termLastKind : undefined,
     dash,
@@ -125,7 +133,14 @@ export function load(): DeskState {
 export function save(patch: Record<string, unknown> | Partial<DeskState>): DeskState {
   ensureRoot();
   const body = unwrapPatch(patch as Record<string, unknown>);
-  const merged = normalize({ ...load(), ...body, updatedAt: Date.now() });
+  const current = load();
+  // Invalid lastHash in a partial patch must not wipe the stored route.
+  if ('lastHash' in body && !isHash(body.lastHash)) {
+    delete body.lastHash;
+  }
+  const merged = normalize({ ...current, ...body, updatedAt: Date.now() });
+  // If normalize dropped lastHash, restore current
+  if (!merged.lastHash && current.lastHash) merged.lastHash = current.lastHash;
   const tmp = `${FILE}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(merged, null, 2));
   fs.renameSync(tmp, FILE);

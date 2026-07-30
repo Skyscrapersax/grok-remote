@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const store = new Map<string, string>();
-(globalThis as any).localStorage = {
+(globalThis as unknown as { localStorage: Storage }).localStorage = {
   getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
   setItem: (k: string, v: string) => { store.set(k, String(v)); },
   removeItem: (k: string) => { store.delete(k); },
@@ -10,46 +10,132 @@ const store = new Map<string, string>();
   key: () => null,
   length: 0,
 };
+
 let hash = '';
-(globalThis as any).location = {
+(globalThis as unknown as { location: { hash: string } }).location = {
   get hash() { return hash; },
   set hash(v: string) { hash = v; },
 };
-(globalThis as any).fetch = async () => ({
+
+// Silence server pushes in unit tests
+(globalThis as unknown as { fetch: typeof fetch }).fetch = (async () => ({
   ok: true,
   status: 200,
   text: async () => JSON.stringify({ ok: true, desk: {} }),
-});
+  json: async () => ({ ok: true, desk: {} }),
+})) as unknown as typeof fetch;
 
-const mod = await import('../src/lib/desk-furniture.js');
+const {
+  loadDeskFurniture,
+  saveDeskFurniture,
+  rememberDeskHash,
+  restoreDeskHashIfEmpty,
+  rememberRailSystemOpen,
+  isRailSystemOpen,
+  rememberDeskTheme,
+  getDeskTheme,
+  rememberLastAgent,
+  rememberTermTabs,
+  rememberDashCollapsed,
+  getDashCollapsed,
+  rememberDashGroupMode,
+  getDashGroupMode,
+  rememberDashSearch,
+  getDashSearch,
+  rememberTermLastKind,
+  getTermLastKind,
+} = await import('../src/lib/desk-furniture.js');
 
-test('save/load', () => {
+test('save/load desk furniture', () => {
   store.clear();
-  mod.saveDeskFurniture({ lastHash: '#/dash' });
-  assert.equal(mod.loadDeskFurniture().lastHash, '#/dash');
-  assert.equal(mod.loadDeskFurniture().version, 1);
+  saveDeskFurniture({ lastHash: '#/dash' });
+  const d = loadDeskFurniture();
+  assert.equal(d.lastHash, '#/dash');
+  assert.equal(d.version, 1);
+  assert.ok(typeof d.updatedAt === 'number');
 });
 
-test('hash restore', () => {
+test('rememberDeskHash ignores empty', () => {
+  store.clear();
+  rememberDeskHash('#/');
+  assert.equal(loadDeskFurniture().lastHash, undefined);
+  rememberDeskHash('#/term');
+  assert.equal(loadDeskFurniture().lastHash, '#/term');
+});
+
+test('restoreDeskHashIfEmpty applies last hash when empty', () => {
   store.clear();
   hash = '';
-  mod.saveDeskFurniture({ lastHash: '#/chats' });
-  assert.equal(mod.restoreDeskHashIfEmpty(), '#/chats');
+  saveDeskFurniture({ lastHash: '#/chats' });
+  const applied = restoreDeskHashIfEmpty();
+  assert.equal(applied, '#/chats');
   assert.equal(hash, '#/chats');
 });
 
-test('theme + agent + term tabs', () => {
+test('restoreDeskHashIfEmpty is no-op when already on a route', () => {
   store.clear();
-  mod.rememberDeskTheme('atelier');
-  mod.rememberLastAgent('a1');
-  mod.rememberTermTabs([{ kind: 'shell', cwd: '/tmp' }]);
-  assert.equal(mod.getDeskTheme(), 'atelier');
-  assert.equal(mod.getLastAgentId(), 'a1');
-  assert.equal(mod.loadDeskFurniture().termTabs?.[0]?.kind, 'shell');
+  hash = '#/dash';
+  saveDeskFurniture({ lastHash: '#/term' });
+  assert.equal(restoreDeskHashIfEmpty(), null);
+  assert.equal(hash, '#/dash');
 });
 
-test('rail more', () => {
+test('rail system open dual-writes legacy key', () => {
   store.clear();
-  mod.rememberRailSystemOpen(true);
-  assert.equal(mod.isRailSystemOpen(), true);
+  rememberRailSystemOpen(true);
+  assert.equal(isRailSystemOpen(), true);
+  assert.equal(store.get('grok-remote.rail.system'), '1');
+  rememberRailSystemOpen(false);
+  assert.equal(isRailSystemOpen(), false);
+});
+
+test('theme dual-writes desk and legacy theme key', () => {
+  store.clear();
+  rememberDeskTheme('atelier');
+  assert.equal(getDeskTheme(), 'atelier');
+  assert.equal(store.get('grok-remote.theme'), 'atelier');
+  assert.equal(loadDeskFurniture().theme, 'atelier');
+});
+
+test('last agent + term tabs persist', () => {
+  store.clear();
+  rememberLastAgent('abc');
+  rememberTermTabs([{ kind: 'shell', cwd: '/tmp' }]);
+  const d = loadDeskFurniture();
+  assert.equal(d.lastAgentId, 'abc');
+  assert.equal(d.termTabs?.[0]?.kind, 'shell');
+});
+
+test('dash collapsed / group / search persist in desk.json', () => {
+  store.clear();
+  rememberDashCollapsed(['archived', 'disconnected']);
+  rememberDashGroupMode('cwd');
+  rememberDashSearch('alpha');
+  assert.deepEqual(getDashCollapsed(), ['archived', 'disconnected']);
+  assert.equal(getDashGroupMode(), 'cwd');
+  assert.equal(getDashSearch(), 'alpha');
+  // legacy dual-write
+  assert.ok(store.get('grok-remote.dash.collapsed')?.includes('archived'));
+  assert.equal(store.get('grok-remote.dash.group'), 'cwd');
+  const d = loadDeskFurniture();
+  assert.deepEqual(d.dash?.collapsed, ['archived', 'disconnected']);
+  assert.equal(d.dash?.groupMode, 'cwd');
+});
+
+test('term lastKind persists', () => {
+  store.clear();
+  rememberTermLastKind('shell');
+  assert.equal(getTermLastKind(), 'shell');
+  assert.equal(loadDeskFurniture().termLastKind, 'shell');
+});
+
+test('hydrate from legacy keys when desk.json empty', () => {
+  store.clear();
+  store.set('grok-remote.theme', 'carbon');
+  store.set('grok-remote.dash.group', 'cwd');
+  store.set('grok-remote.dash.collapsed', JSON.stringify(['idle']));
+  const d = loadDeskFurniture();
+  assert.equal(d.theme, 'carbon');
+  assert.equal(d.dash?.groupMode, 'cwd');
+  assert.deepEqual(d.dash?.collapsed, ['idle']);
 });
