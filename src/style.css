@@ -10043,7 +10043,8 @@ body::after {
   height: 100%;
   width: 100%;
 }
-.term-native-note {
+.term-native-note,
+.term-restore-note {
   position: absolute;
   left: 12px;
   right: 12px;
@@ -10054,20 +10055,27 @@ body::after {
   gap: 8px;
   padding: 10px 12px;
   border-radius: var(--radius-sm, 2px);
-  border: 1px solid color-mix(in srgb, var(--teal) 30%, var(--border));
-  background: var(--panel);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 12.5px;
-  box-shadow: var(--shadow-md);
+  border: 1px solid color-mix(in srgb, var(--brass, var(--teal)) 30%, var(--border));
+  background: var(--wood-3, var(--panel));
+  color: var(--ink, var(--text));
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  box-shadow: var(--shadow-md, 0 6px 18px rgba(12, 8, 4, 0.42));
 }
-.term-native-note-ico {
+.term-restore-note {
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 45%, var(--border));
+  background: color-mix(in srgb, var(--brass, var(--teal)) 8%, var(--wood-3, var(--panel)));
+}
+.term-native-note-ico,
+.term-restore-note-ico {
   display: inline-flex;
-  color: var(--teal);
+  color: var(--brass, var(--teal));
   flex: 0 0 auto;
   margin-top: 1px;
 }
-.term-native-note-ico svg {
+.term-native-note-ico svg,
+.term-restore-note-ico svg {
   width: 14px;
   height: 14px;
 }

@@ -96,6 +96,22 @@ function hydrateFromLegacy(base: DeskFurniture): DeskFurniture {
       const k = localStorage.getItem(LEGACY.termLastKind);
       if (k) { out.termLastKind = k; dirty = true; }
     }
+    if (!Array.isArray(out.termTabs) || !out.termTabs.length) {
+      try {
+        const raw = localStorage.getItem('grok-remote.term.tabs');
+        if (raw) {
+          const parsed = JSON.parse(raw) as DeskTermIntent[];
+          if (Array.isArray(parsed) && parsed.length) {
+            out.termTabs = parsed.map((t) => ({
+              kind: String(t?.kind || 'shell'),
+              cwd: t?.cwd ? String(t.cwd) : undefined,
+              name: t?.name ? String(t.name) : undefined,
+            }));
+            dirty = true;
+          }
+        }
+      } catch { /* ignore */ }
+    }
 
     const legacyDash = readLegacyDash();
     const dash: DeskDashState = { ...(out.dash || {}) };
@@ -348,7 +364,43 @@ export function rememberDeskSplit(sizes: number[], collapsed: boolean): void {
 }
 
 export function rememberTermTabs(tabs: DeskTermIntent[]): void {
-  saveDeskFurniture({ termTabs: (tabs || []).slice(0, 12) });
+  const termTabs = (tabs || [])
+    .filter((t) => t && (t.kind || t.cwd || t.name))
+    .slice(0, 12)
+    .map((t) => ({
+      kind: String(t.kind || 'shell'),
+      cwd: t.cwd ? String(t.cwd) : undefined,
+      name: t.name ? String(t.name) : undefined,
+    }));
+  saveDeskFurniture({ termTabs });
+  try {
+    localStorage.setItem('grok-remote.term.tabs', JSON.stringify(termTabs));
+  } catch { /* ignore */ }
+}
+
+export function getTermTabs(): DeskTermIntent[] {
+  const fromDesk = read().termTabs;
+  if (Array.isArray(fromDesk) && fromDesk.length) {
+    return fromDesk.map((t) => ({
+      kind: String(t.kind || 'shell'),
+      cwd: t.cwd ? String(t.cwd) : undefined,
+      name: t.name ? String(t.name) : undefined,
+    }));
+  }
+  try {
+    const raw = localStorage.getItem('grok-remote.term.tabs');
+    if (raw) {
+      const parsed = JSON.parse(raw) as DeskTermIntent[];
+      if (Array.isArray(parsed)) {
+        return parsed.map((t) => ({
+          kind: String(t?.kind || 'shell'),
+          cwd: t?.cwd ? String(t.cwd) : undefined,
+          name: t?.name ? String(t.name) : undefined,
+        }));
+      }
+    }
+  } catch { /* ignore */ }
+  return [];
 }
 
 // ── Dash board chrome ──────────────────────────────────────────────────────

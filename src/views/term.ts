@@ -9,9 +9,14 @@ import { el } from '../lib/render.js';
 import { api } from '../lib/api.js';
 import { iconHtml } from '../lib/icons.js';
 import { copyToClipboard } from '../lib/copy.js';
-import { rememberTermLastKind } from '../lib/desk-furniture.js';
 import type { SurfaceKeyHandler } from '../lib/desk-keys.js';
-import { rememberTermTabs } from '../lib/desk-furniture.js';
+import {
+  rememberTermLastKind,
+  rememberTermTabs,
+  getTermTabs,
+  getTermLastKind,
+  type DeskTermIntent,
+} from '../lib/desk-furniture.js';
 
 export interface TermInfo {
   id: string;
@@ -66,6 +71,8 @@ export class TermView {
   private activeId: string | null = null;
   private onResize: () => void;
   private onDeskTerm: (ev: Event) => void;
+  private restoring = false;
+  private restoreNoteEl: HTMLElement | null = null;
 
   constructor() {
     this.onResize = () => {
@@ -322,25 +329,110 @@ export class TermView {
 
   private async hydrate(): Promise<void> {
     try {
+      // 1) Reattach live PTYs still held by the server process
       const data = await api.term.list() as { terminals?: TermInfo[] };
-      const list = data.terminals || [];
-      for (const t of list) {
-        if (t.alive) await this.attach(t);
+      const live = (data.terminals || []).filter((t) => t && t.alive);
+      for (const t of live) {
+        await this.attach(t);
       }
-      if (!this.activeId && list[0]) this.activate(list[0].id);
+
+      // 2) Recreate missing intents from desk.json / localStorage
+      const intents = getTermTabs();
+      const covered = new Set(
+        live.map((t) => this.intentKey(t.kind, t.cwd)),
+      );
+      const missing = intents.filter(
+        (i) => !covered.has(this.intentKey(i.kind || 'shell', i.cwd || '')),
+      );
+
+      if (missing.length > 0) {
+        await this.restoreIntents(missing);
+      } else if (live.length === 0 && intents.length === 0) {
+        // Fresh desk: seed nothing — empty state is intentional craft voice.
+        // termLastKind is kept for "new session" defaults only.
+        void getTermLastKind();
+      }
+
+      if (!this.activeId) {
+        const first = this.tabs.keys().next().value as string | undefined;
+        if (first) this.activate(first);
+      }
       this.renderTabs();
       this.persistIntents();
       this.renderMeta();
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('[term] hydrate failed', err);
+      this.renderTabs();
+      this.renderMeta();
+    }
   }
 
-  private persistIntents(): void {
-    const tabs = [...this.tabs.values()].map((tab) => ({
-      kind: tab.info.kind,
-      cwd: tab.info.cwd,
-      name: tab.info.name,
-    }));
-    rememberTermTabs(tabs);
+  private intentKey(kind: string, cwd: string): string {
+    return `${String(kind || 'shell')}::${String(cwd || '')}`;
+  }
+
+  private normalizeKind(kind?: string): TermKind {
+    if (kind === 'grok' || kind === 'grok-dashboard' || kind === 'shell') return kind;
+    return 'shell';
+  }
+
+  private showRestoreNote(n: number): void {
+    this.clearRestoreNote();
+    this.restoreNoteEl = el('div', { class: 'term-restore-note' },
+      el('span', { class: 'term-restore-note-ico', html: iconHtml('terminal') }),
+      el('span', {}, `Restoring ${n} session${n === 1 ? '' : 's'} from desk…`),
+    );
+    this.hostEl.prepend(this.restoreNoteEl);
+  }
+
+  private clearRestoreNote(): void {
+    if (this.restoreNoteEl) {
+      try { this.restoreNoteEl.remove(); } catch { /* ignore */ }
+      this.restoreNoteEl = null;
+    }
+  }
+
+  /** Recreate PTY tabs from persisted intents (after restart / missing live). */
+  private async restoreIntents(intents: DeskTermIntent[]): Promise<void> {
+    if (this.restoring || !intents.length) return;
+    this.restoring = true;
+    const batch = intents.slice(0, 8);
+    this.showRestoreNote(batch.length);
+    try {
+      for (const intent of batch) {
+        const kind = this.normalizeKind(intent.kind);
+        await this.create(kind, intent.cwd, { fromRestore: true });
+      }
+    } finally {
+      this.restoring = false;
+      this.clearRestoreNote();
+    }
+  }
+
+  /**
+   * Dual-write live tab intents to localStorage + desk.json.
+   * When empty: only clear stored intents if allowEmpty (user closed last tab).
+   * Mid-restore / native-fallback must not wipe desk termTabs.
+   */
+  private persistIntents(opts: { allowEmpty?: boolean } = {}): void {
+    const alive = [...this.tabs.values()].filter((t) => t.info.alive);
+    if (!alive.length) {
+      if (opts.allowEmpty && !this.restoring) {
+        rememberTermTabs([]);
+      }
+      return;
+    }
+    rememberTermTabs(alive.map((tab) => ({
+      kind: tab.info.kind || 'shell',
+      cwd: tab.info.cwd || undefined,
+      name: tab.info.name || undefined,
+    })));
+    if (this.activeId) {
+      const active = this.tabs.get(this.activeId);
+      if (active?.info.kind) rememberTermLastKind(active.info.kind);
+    } else if (alive[0]?.info.kind) {
+      rememberTermLastKind(alive[0].info.kind);
+    }
   }
 
   private renderTabs(): void {
@@ -456,9 +548,13 @@ export class TermView {
     }
   }
 
-  async create(kind: TermKind, cwd?: string): Promise<void> {
+  async create(
+    kind: TermKind,
+    cwd?: string,
+    opts: { fromRestore?: boolean } = {},
+  ): Promise<void> {
     const dims = { cols: 120, rows: 32 };
-    rememberTermLastKind(kind);
+    if (!opts.fromRestore) rememberTermLastKind(kind);
     try {
       const res = await api.term.create({ kind, cwd, ...dims }) as {
         terminal?: TermInfo;
@@ -474,14 +570,26 @@ export class TermView {
         );
         this.hostEl.appendChild(note);
         setTimeout(() => { try { note.remove(); } catch { /* ignore */ } }, 5000);
+        // Still remember the intent so a later PTY-capable host can restore
+        if (!opts.fromRestore) {
+          const prev = getTermTabs();
+          rememberTermTabs([
+            ...prev.filter((t) => this.intentKey(t.kind || 'shell', t.cwd || '')
+              !== this.intentKey(kind, cwd || '')),
+            { kind, cwd, name: kind },
+          ]);
+        }
         return;
       }
       if (!res.terminal) throw new Error('no terminal returned');
       await this.attach(res.terminal);
       this.activate(res.terminal.id);
+      this.persistIntents();
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : String(err));
+      if (!opts.fromRestore) {
+        alert(err instanceof Error ? err.message : String(err));
+      }
     }
   }
 
@@ -586,7 +694,8 @@ export class TermView {
     try { tab.term.dispose(); } catch { /* ignore */ }
     try { tab.mountEl.remove(); } catch { /* ignore */ }
     this.tabs.delete(id);
-    this.persistIntents();
+    const empty = this.tabs.size === 0;
+    this.persistIntents({ allowEmpty: empty });
     if (this.activeId === id) {
       this.activeId = this.tabs.keys().next().value || null;
       if (this.activeId) this.activate(this.activeId);
@@ -596,7 +705,6 @@ export class TermView {
       }
     } else {
       this.renderTabs();
-      this.persistIntents();
       this.renderMeta();
     }
   }

@@ -36,6 +36,7 @@ const {
   getDeskTheme,
   rememberLastAgent,
   rememberTermTabs,
+  getTermTabs,
   rememberDashCollapsed,
   getDashCollapsed,
   rememberDashGroupMode,
@@ -138,4 +139,21 @@ test('hydrate from legacy keys when desk.json empty', () => {
   assert.equal(d.theme, 'carbon');
   assert.equal(d.dash?.groupMode, 'cwd');
   assert.deepEqual(d.dash?.collapsed, ['idle']);
+});
+
+test('termTabs dual-write local + getTermTabs', () => {
+  store.clear();
+  rememberTermTabs([
+    { kind: 'shell', cwd: '/tmp/a', name: 'shell' },
+    { kind: 'grok', cwd: '/tmp/b', name: 'grok' },
+  ]);
+  rememberTermLastKind('grok');
+  const tabs = getTermTabs();
+  assert.equal(tabs.length, 2);
+  assert.equal(tabs[0]?.kind, 'shell');
+  assert.equal(tabs[1]?.cwd, '/tmp/b');
+  assert.equal(getTermLastKind(), 'grok');
+  const raw = store.get('grok-remote.term.tabs');
+  assert.ok(raw && raw.includes('shell'));
+  assert.equal(loadDeskFurniture().termLastKind, 'grok');
 });

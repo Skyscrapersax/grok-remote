@@ -44,6 +44,7 @@ Default theme is **atelier**: **wood chassis · brass fittings · paper work**. 
 - Keyboard chords as wood keycaps (not soft pills)
 - Chat stream paper slips; quiet intro (`ready · type to begin`); **cwd chip** on tabs
 - Term empty: `no sessions — c shell · g grok · d dash`
+- **Term restore:** live PTYs reattach; missing intents from `desk.json` `termTabs` / `termLastKind` are recreated on `#/term` mount (dual-write localStorage + server). Verify: `npm run verify:term`
 
 ## Keyboard (primary interaction model)
 
