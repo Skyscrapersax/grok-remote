@@ -10,6 +10,7 @@ import os from 'node:os';
 
 import { AgentManager, type PublicAgent } from './lib/agent-manager.js';
 import { load as loadSettings, save as saveSettings } from './lib/settings.js';
+import { load as loadDesk, save as saveDesk, paths as deskPaths } from './lib/desk.js';
 import {
   listFolders,
   createFolder,
@@ -34,6 +35,11 @@ import {
   readReleases,
   type UpdateStepEvent,
 } from './lib/version-update.js';
+import { voiceAuthStatus } from './lib/voice-auth.js';
+import { attachVoiceProxy } from './lib/voice-proxy.js';
+import { TermHost } from './lib/term-host.js';
+import { attachTermProxy } from './lib/term-proxy.js';
+import { launchGrokTerm, launchGrokDashboard, launchMacTerminal, probeNative } from './lib/launch-native.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -66,6 +72,7 @@ const MIME: Record<string, string> = {
 };
 
 const manager = new AgentManager();
+const terms = new TermHost();
 
 interface TailscaleIdentity {
   backend: string;
@@ -176,6 +183,149 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: string,
     return;
   }
 
+  if (url === '/api/voice/status' && method === 'GET') {
+    const st = voiceAuthStatus();
+    sendJson(res, 200, {
+      ok: st.ok,
+      enabled: true,
+      wsPath: '/api/voice/ws',
+      model: process.env['GROK_VOICE_MODEL'] || 'grok-voice-latest',
+      voice: process.env['GROK_VOICE_ID'] || 'eve',
+      source: st.source,
+      expiresAt: st.expiresAt,
+      hint: st.hint,
+    });
+    return;
+  }
+
+  // ── Embedded terminals (Grok Deck) ────────────────────────────
+  if (url === '/api/term' && method === 'GET') {
+    sendJson(res, 200, { ok: true, terminals: terms.list() });
+    return;
+  }
+  if (url === '/api/term' && method === 'POST') {
+    try {
+      const body = (await readJsonBody(req) || {}) as Record<string, unknown>;
+      const kind = typeof body['kind'] === 'string' ? body['kind'] as 'shell' | 'grok' | 'grok-dashboard' | 'custom' : 'shell';
+      const name = typeof body['name'] === 'string' ? body['name'] : undefined;
+      const cwd = typeof body['cwd'] === 'string' ? body['cwd'] : undefined;
+      const cols = typeof body['cols'] === 'number' ? body['cols'] : undefined;
+      const rows = typeof body['rows'] === 'number' ? body['rows'] : undefined;
+      const cmd = typeof body['cmd'] === 'string' ? body['cmd'] : undefined;
+      const fallbackNative = body['fallbackNative'] !== false;
+      try {
+        const rec = terms.spawn({ kind, name, cwd, cols, rows, cmd });
+        sendJson(res, 201, { ok: true, terminal: rec });
+      } catch (spawnErr) {
+        // PTY unavailable (sandbox / restricted host) → optional native Terminal fallback
+        if (fallbackNative && (kind === 'shell' || kind === 'grok' || kind === 'grok-dashboard')) {
+          const launched = launchMacTerminal(kind, cwd);
+          if (launched.ok) {
+            sendJson(res, 200, {
+              ok: true,
+              native: true,
+              fallback: true,
+              ...launched,
+              // PTY failed (common under restricted hosts); native Terminal is intentional polish fallback.
+              ptyError: spawnErr instanceof Error ? spawnErr.message : String(spawnErr),
+              message: launched.message || 'Opened in macOS Terminal (embedded PTY unavailable)',
+            });
+            return;
+          }
+        }
+        throw spawnErr;
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      sendJson(res, 500, { ok: false, error: msg });
+    }
+    return;
+  }
+  {
+    const tm = url.match(/^\/api\/term\/([^\/?]+)$/);
+    if (tm) {
+      const id = decodeURIComponent(tm[1] || '');
+      if (method === 'GET') {
+        const t = terms.get(id);
+        if (!t) { sendJson(res, 404, { ok: false, error: 'not found' }); return; }
+        sendJson(res, 200, { ok: true, terminal: t });
+        return;
+      }
+      if (method === 'DELETE') {
+        const ok = terms.kill(id);
+        sendJson(res, ok ? 200 : 404, { ok });
+        return;
+      }
+    }
+    const tr = url.match(/^\/api\/term\/([^\/?]+)\/resize$/);
+    if (tr && method === 'POST') {
+      const id = decodeURIComponent(tr[1] || '');
+      try {
+        const body = (await readJsonBody(req) || {}) as Record<string, unknown>;
+        const cols = Number(body['cols'] || 0);
+        const rows = Number(body['rows'] || 0);
+        const ok = terms.resize(id, cols, rows);
+        sendJson(res, ok ? 200 : 404, { ok });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        sendJson(res, 400, { ok: false, error: msg });
+      }
+      return;
+    }
+  }
+
+  // ── Native launchers (GrokTerm / grok dashboard) ───────────────
+  if (url === '/api/deck/status' && method === 'GET') {
+    const voice = voiceAuthStatus();
+    const agents = manager.list();
+    const connected = agents.filter((a: { connected?: boolean }) => !!a.connected).length;
+    const working = agents.filter((a: { status?: string; inFlight?: number }) =>
+      a.status === 'running' || (typeof a.inFlight === 'number' && a.inFlight > 0)).length;
+    const errored = agents.filter((a: { status?: string; lastError?: unknown }) =>
+      a.status === 'errored' || !!a.lastError).length;
+    sendJson(res, 200, {
+      ok: true,
+      remote: {
+        url: `http://127.0.0.1:${PORT}`,
+        agents: agents.length,
+        connected,
+        working,
+        errored,
+      },
+      terminals: terms.list().length,
+      voice: { ok: voice.ok, source: voice.source, hint: voice.hint },
+      native: probeNative(),
+      features: {
+        dash: true,
+        voice: true,
+        term: true,
+        grokterm: true,
+        grokDashboard: true,
+      },
+    });
+    return;
+  }
+  if (url === '/api/deck/launch' && method === 'POST') {
+    try {
+      const body = (await readJsonBody(req) || {}) as Record<string, unknown>;
+      const target = String(body['target'] || '');
+      const cwd = typeof body['cwd'] === 'string' ? body['cwd'] : undefined;
+      if (target === 'grokterm') {
+        sendJson(res, 200, launchGrokTerm(cwd));
+        return;
+      }
+      if (target === 'grok-dashboard') {
+        sendJson(res, 200, launchGrokDashboard());
+        return;
+      }
+      sendJson(res, 400, { ok: false, error: 'unknown target (use grokterm | grok-dashboard)' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      sendJson(res, 500, { ok: false, error: msg });
+    }
+    return;
+  }
+
   if (url === '/api/version/current' && method === 'GET') {
     try {
       const data = await readCurrentVersion();
@@ -237,6 +387,28 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: string,
       const body = await readJsonBody(req);
       const merged = saveSettings((body || {}) as Record<string, unknown>);
       sendJson(res, 200, merged);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      sendJson(res, 400, { ok: false, error: msg });
+    }
+    return;
+  }
+
+  // Desk continuity — ~/.grok-remote/desk.json
+  if (url === '/api/desk' && method === 'GET') {
+    sendJson(res, 200, { ok: true, desk: loadDesk(), path: deskPaths().file });
+    return;
+  }
+
+  if (url === '/api/desk' && (method === 'PUT' || method === 'PATCH')) {
+    try {
+      const body = await readJsonBody(req);
+      const patch = (body && typeof body === 'object' && (body as { desk?: unknown }).desk
+        && typeof (body as { desk: unknown }).desk === 'object'
+        ? (body as { desk: Record<string, unknown> }).desk
+        : body) as Record<string, unknown>;
+      const desk = saveDesk(patch || {});
+      sendJson(res, 200, { ok: true, desk, path: deskPaths().file });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       sendJson(res, 400, { ok: false, error: msg });
@@ -1291,6 +1463,11 @@ const server = http.createServer(async (req: IncomingMessage, res: ServerRespons
   serveStatic(req, res);
 });
 
+// Grok Voice: browser WS proxy → xAI Realtime + agent tools
+attachVoiceProxy(server, manager);
+// Embedded PTY terminals for Grok Deck
+attachTermProxy(server, terms);
+
 const retention = startRetentionTimer({ getSettings: loadSettings, manager: manager as never });
 
 server.listen(PORT, HOST, () => {
@@ -1298,6 +1475,22 @@ server.listen(PORT, HOST, () => {
   const where = ts?.dns ? `http://${ts.dns}:${PORT}` : `http://${HOST}:${PORT}`;
   console.log(`[grok-remote] listening on ${HOST}:${PORT}`);
   console.log(`[grok-remote] tailnet url: ${where}`);
+  console.log(`[grok-remote] voice: ${voiceAuthStatus().ok ? 'auth ready' : 'auth missing'} (${voiceAuthStatus().hint})`);
+  console.log(`[grok-remote] deck: terminals + dash + native launchers ready`);
+  // Auto-reconnect starred (demo/operator) agents so Deck/Dash look live after restarts.
+  void (async () => {
+    const list = manager.list().filter((a: { starred?: boolean; archived?: boolean; connected?: boolean }) =>
+      !!a.starred && !a.archived && !a.connected);
+    for (const a of list) {
+      try {
+        await manager.connect(a.id);
+        console.log(`[grok-remote] reconnected starred agent ${a.name || a.id}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(`[grok-remote] reconnect skipped for ${a.name || a.id}: ${msg}`);
+      }
+    }
+  })();
 });
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
@@ -1311,6 +1504,7 @@ async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`[grok-remote] shutdown on ${signal}`);
+  try { terms.shutdownAll(); } catch { /* ignore */ }
   try { await manager.shutdownAll(); } catch { /* ignore */ }
   server.close(() => process.exit(0));
   const t = setTimeout(() => process.exit(0), 3000);

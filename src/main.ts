@@ -1,16 +1,41 @@
 // grok-remote dashboard entry point.
 
+import './styles/premium.css';
+import './styles/craft-layer.css';
 import Split from 'split.js';
 import { api } from './lib/api.js';
 import { AgentsSidebar } from './views/agents.js';
 import { ChatView } from './views/chat.js';
 import { SettingsView } from './views/settings.js';
+import { DashView } from './views/dash.js';
+import { DeckView } from './views/deck.js';
+import { TermView } from './views/term.js';
 import { el } from './lib/render.js';
 import { registerPwa } from './lib/pwa.js';
-import { applyTheme, getTheme, nextTheme, getThemeMeta } from './lib/themes.js';
+import { applyTheme, getTheme, nextTheme, getThemeMeta, setTheme } from './lib/themes.js';
 import { installVersionFooter } from './lib/version-footer.js';
 import { SYSTEM_PAGES, getSystemPage } from './views/system/index.js';
 import { iconHtml } from './lib/icons.js';
+import {
+  rememberDeskHash,
+  restoreDeskHashIfEmpty,
+  isRailSystemOpen,
+  rememberRailSystemOpen,
+  rememberDeskTheme,
+  getDeskTheme,
+  bootstrapDesk,
+  rememberLastAgent,
+  rememberDeskSplit,
+} from './lib/desk-furniture.js';
+import {
+  installDeskKeys,
+  parseRouteSurface,
+  type DeskSurface,
+} from './lib/desk-keys.js';
+import {
+  defaultDeskCommands,
+  installDeskOverlays,
+} from './lib/desk-overlays.js';
 
 interface Agent {
   id: string;
@@ -22,6 +47,9 @@ interface Agent {
 
 type Route =
   | { name: 'home' }
+  | { name: 'deck' }
+  | { name: 'dash' }
+  | { name: 'term' }
   | { name: 'chat'; agentId: string }
   | { name: 'settings'; sub: string }
   | { name: 'system'; area: string; parts: string[] }
@@ -32,7 +60,46 @@ interface SystemPageRef {
   module?: { mount?: (host: HTMLElement, route?: unknown) => void; unmount?: () => void };
 }
 
-applyTheme(getTheme());
+/**
+ * Theme resolution (craft desk):
+ * 1) desk.json / local theme if user already chose
+ * 2) else server settings.theme (default atelier)
+ * 3) else atelier
+ * Legacy "dark" from either side promotes to atelier once.
+ */
+function resolveInitialTheme(): string {
+  const fromDesk = getDeskTheme() || (() => {
+    try { return localStorage.getItem('grok-remote.theme') || ''; } catch { return ''; }
+  })();
+  if (fromDesk && fromDesk !== 'dark' && fromDesk !== 'aurora' && fromDesk !== 'nebula') {
+    return fromDesk;
+  }
+  return 'atelier';
+}
+
+applyTheme(resolveInitialTheme());
+rememberDeskTheme(getTheme());
+
+/** Pull server settings theme; only apply if client still on default-ish atelier/dark. */
+async function syncThemeFromServer(): Promise<void> {
+  try {
+    const s = await api.getSettings() as { theme?: string };
+    const serverTheme = typeof s?.theme === 'string' ? s.theme : '';
+    if (!serverTheme) return;
+    const cur = getTheme();
+    // Prefer server when client is still on craft default or legacy dark
+    if (cur === 'atelier' || cur === 'dark' || !cur) {
+      const next = serverTheme === 'dark' ? 'atelier' : serverTheme;
+      setTheme(next);
+      rememberDeskTheme(next);
+      syncThemeToggle(next);
+    }
+    // If server still dark, push atelier up so drift cannot return
+    if (serverTheme === 'dark') {
+      void api.patchSettings({ theme: 'atelier' }).catch(() => { /* ignore */ });
+    }
+  } catch { /* offline / first paint */ }
+}
 
 function syncThemeToggle(name: string): void {
   const meta = getThemeMeta(name);
@@ -87,8 +154,14 @@ const SETTINGS_AREAS = new Set([
 function parseRoute(): Route {
   const h = (location.hash || '#/').replace(/^#/, '');
   const parts = h.split('/').filter(Boolean);
-  if (!parts.length) return { name: 'home' };
+  // Default home is the unified Deck
+  if (!parts.length) return { name: 'deck' };
+  if (parts[0] === 'deck' || parts[0] === 'home') return { name: 'deck' };
+  if (parts[0] === 'dash' || parts[0] === 'dashboard') return { name: 'dash' };
+  if (parts[0] === 'term' || parts[0] === 'terminal' || parts[0] === 'tty') return { name: 'term' };
+  if (parts[0] === 'chats' || parts[0] === 'chat') return { name: 'home' };
   if (parts[0] === 'agents' && parts[1]) return { name: 'chat', agentId: parts[1] };
+  if (parts[0] === 'agents' && !parts[1]) return { name: 'home' };
   if (parts[0] === 'settings') {
     return { name: 'settings', sub: parts[1] || 'general' };
   }
@@ -96,7 +169,7 @@ function parseRoute(): Route {
   if (parts[0] && SETTINGS_AREAS.has(parts[0])) {
     return { name: 'redirect', to: `#/settings/${parts[0]}` };
   }
-  return { name: 'home' };
+  return { name: 'deck' };
 }
 
 function navigate(hash: string): void {
@@ -105,6 +178,7 @@ function navigate(hash: string): void {
   } else {
     location.hash = hash;
   }
+  rememberDeskHash(hash);
 }
 
 function openDrawer(): void {
@@ -153,25 +227,91 @@ function makeRailIcon({ href, title, area, iconName, label }: RailIconOpts): HTM
 
 function buildLeftRail(): HTMLElement {
   const rail = el('nav', { class: 'left-rail', 'aria-label': 'top-level navigation' });
-  rail.appendChild(makeRailIcon({
-    href: '#/', title: 'conversations', area: 'home', iconName: 'home', label: 'chats',
+
+  // Primary workbench surfaces (craft desk spine)
+  const primary = el('div', { class: 'left-rail-primary' });
+  primary.appendChild(makeRailIcon({
+    href: '#/deck', title: 'Grok Deck — unified home', area: 'deck', iconName: 'home', label: 'deck',
   }));
+  primary.appendChild(makeRailIcon({
+    href: '#/dash', title: 'agent dashboard', area: 'dash', iconName: 'leaders', label: 'dash',
+  }));
+  primary.appendChild(makeRailIcon({
+    href: '#/term', title: 'embedded terminal', area: 'term', iconName: 'flow', label: 'term',
+  }));
+  primary.appendChild(makeRailIcon({
+    href: '#/chats', title: 'conversations', area: 'home', iconName: 'skills', label: 'chats',
+  }));
+  rail.appendChild(primary);
+
+  // System pages demoted under "more" so the rail reads as a workbench
+  const system = el('div', { class: 'left-rail-system' });
+  const systemItems = el('div', {
+    class: 'left-rail-system-items',
+    id: 'left-rail-system-items',
+    hidden: true,
+  });
   for (const p of SYSTEM_PAGES) {
-    rail.appendChild(makeRailIcon({
+    systemItems.appendChild(makeRailIcon({
       href: `#/${p.area}`, title: p.label, area: p.area, iconName: p.iconName, label: p.label,
     }));
   }
+  const moreBtn = el('button', {
+    class: 'left-rail-more',
+    type: 'button',
+    id: 'left-rail-more',
+    title: 'System pages (memory, leaders, sessions, health)',
+    'aria-label': 'Show system pages',
+    'aria-expanded': 'false',
+    'aria-controls': 'left-rail-system-items',
+    onclick: () => {
+      const open = systemItems.hasAttribute('hidden');
+      if (open) systemItems.removeAttribute('hidden');
+      else systemItems.setAttribute('hidden', '');
+      moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      moreBtn.setAttribute('aria-label', open ? 'Hide system pages' : 'Show system pages');
+      rememberRailSystemOpen(open);
+    },
+  },
+    el('span', { class: 'left-rail-icon', html: iconHtml('settings') }),
+    el('span', { class: 'left-rail-more-label' }, 'more'),
+  );
+  system.appendChild(moreBtn);
+  system.appendChild(systemItems);
+  rail.appendChild(system);
+
+  // Restore expanded state; auto-expand is handled in updateRailHighlight
+  if (isRailSystemOpen()) {
+    systemItems.removeAttribute('hidden');
+    moreBtn.setAttribute('aria-expanded', 'true');
+    moreBtn.setAttribute('aria-label', 'Hide system pages');
+  }
+
   return rail;
 }
 
 function updateRailHighlight(route: Route): void {
   const rail = document.querySelector('.left-rail');
   if (!rail) return;
-  let activeArea = 'home';
-  if (route.name === 'chat') activeArea = 'home';
+  let activeArea = 'deck';
+  if (route.name === 'chat' || route.name === 'home') activeArea = 'home';
+  else if (route.name === 'deck') activeArea = 'deck';
+  else if (route.name === 'dash') activeArea = 'dash';
+  else if (route.name === 'term') activeArea = 'term';
   else if (route.name === 'system') activeArea = route.area;
   for (const item of rail.querySelectorAll<HTMLElement>('.left-rail-item')) {
     item.classList.toggle('left-rail-item--active', item.dataset.area === activeArea);
+  }
+
+  // Auto-expand system group when a system page is active
+  if (route.name === 'system') {
+    const systemItems = document.getElementById('left-rail-system-items');
+    const moreBtn = document.getElementById('left-rail-more');
+    if (systemItems?.hasAttribute('hidden')) {
+      systemItems.removeAttribute('hidden');
+      moreBtn?.setAttribute('aria-expanded', 'true');
+      moreBtn?.setAttribute('aria-label', 'Hide system pages');
+    }
   }
 }
 
@@ -182,10 +322,15 @@ function mountDashboard(): void {
 
   let currentAgent: Agent | null = null;
   let activeSystemPage: SystemPageRef | null = null;
+  let activeDash: DashView | null = null;
+  let activeDeck: DeckView | null = null;
+  let activeTerm: TermView | null = null;
+  let unregSurface: (() => void) | null = null;
   const chat     = new ChatView();
   const settings = new SettingsView();
   const sidebar  = new AgentsSidebar({
     onSelect: (id: string) => {
+      rememberLastAgent(id);
       chat.focusConversation();
       navigate(`#/agents/${encodeURIComponent(id)}`);
     },
@@ -193,10 +338,80 @@ function mountDashboard(): void {
     onDelete: (id: string) => {
       if (currentAgent && currentAgent.id === id) {
         currentAgent = null;
-        navigate('#/');
+        navigate('#/chats');
       }
     },
   });
+
+  // Chat surface j/k roster motion
+  document.addEventListener('grok-desk:sidebar-move', ((ev: CustomEvent<{ delta?: number }>) => {
+    const delta = Number(ev.detail?.delta || 0);
+    if (!delta) return;
+    sidebar.moveSelection(delta);
+  }) as EventListener);
+
+  // ── Desk keyboard control plane (primary interaction model) ──────────
+  const overlays = installDeskOverlays(document.body);
+  overlays.setCommands(defaultDeskCommands(navigate));
+
+  const deskKeys = installDeskKeys({
+    controller: {
+      navigate,
+      getSurface: (): DeskSurface => parseRouteSurface(location.hash),
+      onAction: (action, payload) => {
+        if (activeDeck) activeDeck.onDeskAction(action);
+        if (activeDash) activeDash.onDeskAction(action);
+        if (activeTerm) activeTerm.onDeskAction(action, payload);
+      },
+    },
+    openPalette: () => overlays.openPalette(),
+    openHelp: () => overlays.openHelp(parseRouteSurface(location.hash)),
+    closeOverlays: () => overlays.close(),
+    isOverlayOpen: () => overlays.isOpen(),
+  });
+
+  document.addEventListener('grok-desk:help', () => {
+    overlays.openHelp(parseRouteSurface(location.hash));
+  });
+
+  // Chord / prefix status chip in the topbar (subtle)
+  const statusText = document.getElementById('status-text');
+  const chordObserver = new MutationObserver(() => {
+    if (!statusText) return;
+    if (document.body.hasAttribute('data-desk-term-prefix')) {
+      statusText.textContent = 'term prefix (ctrl-b)…';
+      activeTerm?.setPrefixArmed(true);
+    } else if (document.body.getAttribute('data-desk-chord') === 'g') {
+      statusText.textContent = 'g…';
+      activeTerm?.setPrefixArmed(false);
+    } else {
+      activeTerm?.setPrefixArmed(false);
+    }
+  });
+  try {
+    chordObserver.observe(document.body, { attributes: true, attributeFilter: ['data-desk-chord', 'data-desk-term-prefix'] });
+  } catch { /* ignore */ }
+
+  function clearSurfaceKeys(): void {
+    if (unregSurface) {
+      unregSurface();
+      unregSurface = null;
+    }
+  }
+
+  /** Register the active surface's j/k + shortcut handler with the desk router. */
+  function bindSurfaceKeys(surface: DeskSurface): void {
+    clearSurfaceKeys();
+    if (surface === 'deck' && activeDeck) {
+      unregSurface = deskKeys.registerSurface('deck', activeDeck.handleKey);
+    } else if (surface === 'dash' && activeDash) {
+      unregSurface = deskKeys.registerSurface('dash', activeDash.handleKey);
+    } else if (surface === 'term' && activeTerm) {
+      unregSurface = deskKeys.registerSurface('term', activeTerm.handleKey);
+    } else if (surface === 'chat') {
+      unregSurface = deskKeys.registerSurface('chat', chat.handleKey);
+    }
+  }
 
   const mainHost = el('div', { class: 'main-pane' });
   const railHost = buildLeftRail();
@@ -227,9 +442,11 @@ function mountDashboard(): void {
   }
   const brandLink = document.getElementById('brand-link');
   if (brandLink) {
+    const name = brandLink.querySelector('.brand-name');
+    if (name) name.textContent = 'Grok Deck';
     brandLink.addEventListener('click', (ev) => {
       ev.preventDefault();
-      navigate('#/');
+      navigate('#/deck');
       closeDrawer();
     });
   }
@@ -269,6 +486,24 @@ function mountDashboard(): void {
     try { settings.unmount(); } catch { /* ignore */ }
     activeSettings = false;
   }
+  function unmountActiveDash(): void {
+    if (!activeDash) return;
+    try { activeDash.unmount(); } catch { /* ignore */ }
+    activeDash = null;
+    clearSurfaceKeys();
+  }
+  function unmountActiveDeck(): void {
+    if (!activeDeck) return;
+    try { activeDeck.unmount(); } catch { /* ignore */ }
+    activeDeck = null;
+    clearSurfaceKeys();
+  }
+  function unmountActiveTerm(): void {
+    if (!activeTerm) return;
+    try { activeTerm.unmount(); } catch { /* ignore */ }
+    activeTerm = null;
+    clearSurfaceKeys();
+  }
 
   function renderRoute(): void {
     const route = parseRoute();
@@ -278,11 +513,32 @@ function mountDashboard(): void {
     }
     if (route.name === 'settings' && activeSettings) {
       updateRailHighlight(route);
+      clearSurfaceKeys();
       settings.setActive(route.sub);
       return;
     }
+    if (route.name === 'dash' && activeDash) {
+      updateRailHighlight(route);
+      bindSurfaceKeys('dash');
+      void activeDash.refresh(true);
+      return;
+    }
+    if (route.name === 'deck' && activeDeck) {
+      updateRailHighlight(route);
+      bindSurfaceKeys('deck');
+      return;
+    }
+    if (route.name === 'term' && activeTerm) {
+      updateRailHighlight(route);
+      bindSurfaceKeys('term');
+      return;
+    }
+    clearSurfaceKeys();
     unmountActiveSystemPage();
     unmountActiveSettings();
+    unmountActiveDash();
+    unmountActiveDeck();
+    unmountActiveTerm();
     mainHost.replaceChildren();
     updateRailHighlight(route);
     if (route.name === 'system') {
@@ -299,6 +555,24 @@ function mountDashboard(): void {
       activeSettings = true;
       return;
     }
+    if (route.name === 'deck') {
+      activeDeck = new DeckView();
+      activeDeck.mount(mainHost);
+      bindSurfaceKeys('deck');
+      return;
+    }
+    if (route.name === 'dash') {
+      activeDash = new DashView();
+      activeDash.mount(mainHost);
+      bindSurfaceKeys('dash');
+      return;
+    }
+    if (route.name === 'term') {
+      activeTerm = new TermView();
+      activeTerm.mount(mainHost);
+      bindSurfaceKeys('term');
+      return;
+    }
     if (route.name === 'chat') {
       chat.mount(mainHost);
       const found = sidebar.agents.find((a: Agent) => a.id === route.agentId);
@@ -307,29 +581,49 @@ function mountDashboard(): void {
         sidebar.selectedId = found.id;
         sidebar.renderList();
         chat.setAgent(found);
+        rememberLastAgent(found.id);
       } else {
         api.getAgent(route.agentId).then((a: unknown) => {
           currentAgent = (a as Agent | null) || { id: route.agentId };
           sidebar.selectedId = currentAgent.id;
           sidebar.renderList();
           chat.setAgent(currentAgent);
+          rememberLastAgent(currentAgent.id);
         }).catch(() => {
           currentAgent = { id: route.agentId };
           chat.setAgent(currentAgent);
+          rememberLastAgent(route.agentId);
         });
       }
+      bindSurfaceKeys('chat');
       return;
     }
+    // home / chats — global chords + chat surface (Esc drawer, focus composer)
     chat.mount(mainHost);
     chat.setAgent(null);
+    bindSurfaceKeys('chat');
   }
 
-  window.addEventListener('hashchange', renderRoute);
+  window.addEventListener('hashchange', () => {
+    rememberDeskHash(location.hash);
+    renderRoute();
+  });
   renderRoute();
+
+  // Keep a dispose hook for HMR / tests
+  (window as unknown as { __deskKeysDispose?: () => void }).__deskKeysDispose = () => {
+    deskKeys.dispose();
+    overlays.dispose();
+    chordObserver.disconnect();
+  };
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Pull server desk.json into local cache, then restore last surface hash.
+  restoreDeskHashIfEmpty(); // local cache first for instant paint
+  void bootstrapDesk(); // server desk.json then re-apply hash if needed
   void pingHello();
+  void syncThemeFromServer();
   setInterval(() => { void pingHello(); }, 10000);
 
   mountDashboard();
@@ -340,7 +634,9 @@ document.addEventListener('DOMContentLoaded', () => {
     themeBtn.addEventListener('click', (ev) => {
       ev.preventDefault();
       const n = nextTheme(getTheme());
+      rememberDeskTheme(n);
       syncThemeToggle(n);
+      void api.patchSettings({ theme: n }).catch(() => { /* ignore */ });
       window.dispatchEvent(new CustomEvent('grok-remote:theme-change', { detail: { theme: n } }));
     });
   }
@@ -444,9 +740,11 @@ function installOuterSplit(splitHost: HTMLElement, sidebarPane: HTMLElement, mai
 
   function persistSizes(sizes: number[]): void {
     try { localStorage.setItem(SIDEBAR_SIZES_KEY, JSON.stringify(sizes)); } catch { /* ignore */ }
+    rememberDeskSplit(sizes, collapsed);
   }
   function persistCollapsed(v: boolean): void {
     try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? '1' : '0'); } catch { /* ignore */ }
+    rememberDeskSplit(lastExpandedSizes, v);
   }
 
   function updateTopbarBtn(): void {

@@ -147,6 +147,32 @@ export const ICONS = {
   folder: wrap(`
     <path d="M2.5 5.5a1.5 1.5 0 0 1 1.5-1.5h3.5l1.5 2H16a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 16H4a1.5 1.5 0 0 1-1.5-1.5z"/>
   `),
+  terminal: wrap(`
+    <rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/>
+    <path d="M6 8.5l2.5 2L6 12.5"/>
+    <path d="M10.5 12.5H14"/>
+  `),
+  dash: wrap(`
+    <rect x="2.5" y="2.5" width="6.5" height="6.5" rx="1.2"/>
+    <rect x="11" y="2.5" width="6.5" height="6.5" rx="1.2"/>
+    <rect x="2.5" y="11" width="6.5" height="6.5" rx="1.2"/>
+    <rect x="11" y="11" width="6.5" height="6.5" rx="1.2"/>
+  `),
+  spark: wrap(`
+    <path d="M10 2.5l1.2 4.2L15.5 8 11.2 9.3 10 13.5 8.8 9.3 4.5 8l4.3-1.3z"/>
+    <path d="M15.5 12.5l.6 2.1 2.1.6-2.1.6-.6 2.1-.6-2.1-2.1-.6 2.1-.6z"/>
+  `),
+  plus: wrap(`
+    <path d="M10 4v12"/>
+    <path d="M4 10h12"/>
+  `),
+  x: wrap(`
+    <path d="M5.5 5.5l9 9"/>
+    <path d="M14.5 5.5l-9 9"/>
+  `),
+  'chevron-right': wrap(`
+    <path d="M7.5 4.5L13 10l-5.5 5.5"/>
+  `),
 } as const;
 
 export type IconName = keyof typeof ICONS;

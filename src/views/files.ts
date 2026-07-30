@@ -276,14 +276,19 @@ function renderDir(state: FilesState, res: DirResponse): void {
 
   for (const ent of entries) {
     const isDir = ent.type === 'directory';
+    const full = joinPath(state.currentPath, ent.name);
+    const selected = !isDir && state.selectedFile === full;
     const row = el('button', {
-      class: `files-row files-row--${isDir ? 'dir' : 'file'}${ent.isHidden ? ' files-row--hidden' : ''}`,
+      class: [
+        'files-row',
+        `files-row--${isDir ? 'dir' : 'file'}`,
+        ent.isHidden ? 'files-row--hidden' : '',
+        selected ? 'files-row--active' : '',
+      ].filter(Boolean).join(' '),
+      'aria-selected': selected ? 'true' : 'false',
       onclick: isDir
-        ? () => loadDir(state, joinPath(state.currentPath, ent.name))
-        : () => {
-            const full = joinPath(state.currentPath, ent.name);
-            void openFile(state, full);
-          },
+        ? () => loadDir(state, full)
+        : () => { void openFile(state, full); },
     },
       el('span', { class: 'files-row-icon' }, isDir ? 'dir' : 'doc'),
       el('span', { class: 'files-row-name' }, ent.name + (isDir ? '/' : '')),
@@ -301,6 +306,22 @@ function renderDir(state: FilesState, res: DirResponse): void {
 
 async function openFile(state: FilesState, filePath: string): Promise<void> {
   state.selectedFile = filePath;
+  // Brass spine on the selected tree row (craft hierarchy)
+  if (state.treeBody) {
+    for (const node of state.treeBody.querySelectorAll('.files-row')) {
+      const btn = node as HTMLElement;
+      if (!btn.classList.contains('files-row--file')) {
+        btn.classList.remove('files-row--active');
+        btn.setAttribute('aria-selected', 'false');
+        continue;
+      }
+      const name = (btn.querySelector('.files-row-name')?.textContent || '').replace(/\/$/, '');
+      const full = joinPath(state.currentPath, name);
+      const on = full === filePath;
+      btn.classList.toggle('files-row--active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+  }
   if (state.viewerTitle) state.viewerTitle.textContent = filePath;
   state.viewerBody?.replaceChildren(el('div', { class: 'files-loading' }, 'loading...'));
   state.root?.classList.add('files--show-viewer');

@@ -8,7 +8,7 @@
 // Persistence: localStorage key `grok-remote.theme`.
 
 const STORAGE_KEY = 'grok-remote.theme';
-const DEFAULT_THEME = 'dark';
+const DEFAULT_THEME = 'atelier';
 
 export interface Theme {
   name:   string;
@@ -20,15 +20,23 @@ export interface Theme {
 }
 
 export type ThemeName =
-  | 'dark' | 'light' | 'hacker' | 'unicorn'
+  | 'atelier' | 'dark' | 'light' | 'hacker' | 'unicorn'
   | 'nebula' | 'aurora' | 'sunset'
   | 'midnight' | 'carbon' | 'mocha';
 
 export const THEMES: Theme[] = [
   {
+    name:    'atelier',
+    label:   'atelier',
+    blurb:   'wood, brass, ink — hand-crafted desk default',
+    accent:  '#c9a66a',
+    swatch:  '#161310',
+    chrome:  '#1c1814',
+  },
+  {
     name:    'dark',
     label:   'dark',
-    blurb:   'deep blue-black with teal accents (default)',
+    blurb:   'deep blue-black with teal accents',
     accent:  '#5eead4',
     swatch:  '#07090c',
     chrome:  '#0c1117',
@@ -36,10 +44,10 @@ export const THEMES: Theme[] = [
   {
     name:    'light',
     label:   'light',
-    blurb:   'warm off-white with darker teal/blue accents',
-    accent:  '#0d9488',
-    swatch:  '#fafafa',
-    chrome:  '#ffffff',
+    blurb:   'warm paper with brass ink accents',
+    accent:  '#8a6a3a',
+    swatch:  '#f6f2ea',
+    chrome:  '#fbf8f2',
   },
   {
     name:    'hacker',

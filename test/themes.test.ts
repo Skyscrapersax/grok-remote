@@ -32,7 +32,7 @@ const themes = await import('../src/lib/themes.js');
 test('THEMES exposes the registered themes', () => {
   const names = themes.THEMES.map((t) => t.name).sort();
   assert.deepEqual(names, [
-    'aurora', 'carbon', 'dark', 'hacker', 'light',
+    'atelier', 'aurora', 'carbon', 'dark', 'hacker', 'light',
     'midnight', 'mocha', 'nebula', 'sunset', 'unicorn',
   ]);
 });
@@ -45,7 +45,7 @@ test('every theme declares a chrome color (PWA window / browser titlebar)', () =
 
 test('getTheme returns the default when no value is stored', () => {
   store.clear();
-  assert.equal(themes.getTheme(), 'dark');
+  assert.equal(themes.getTheme(), 'atelier');
 });
 
 test('getTheme returns the stored value when it is a known theme', () => {
@@ -57,7 +57,7 @@ test('getTheme returns the stored value when it is a known theme', () => {
 test('getTheme falls back to default when the stored value is unknown', () => {
   store.clear();
   store.set('grok-remote.theme', 'midnight-mango');
-  assert.equal(themes.getTheme(), 'dark');
+  assert.equal(themes.getTheme(), 'atelier');
 });
 
 test('setTheme persists known themes and rejects unknowns by falling back to default', () => {
@@ -65,8 +65,8 @@ test('setTheme persists known themes and rejects unknowns by falling back to def
   assert.equal(themes.setTheme('light'), 'light');
   assert.equal(store.get('grok-remote.theme'), 'light');
 
-  assert.equal(themes.setTheme('not-a-theme'), 'dark');
-  assert.equal(store.get('grok-remote.theme'), 'dark');
+  assert.equal(themes.setTheme('not-a-theme'), 'atelier');
+  assert.equal(store.get('grok-remote.theme'), 'atelier');
 });
 
 test('applyTheme writes the data-theme attribute on documentElement', () => {
@@ -78,12 +78,13 @@ test('applyTheme writes the data-theme attribute on documentElement', () => {
 
 test('applyTheme normalizes unknown themes to default before writing', () => {
   themes.applyTheme('nonsense');
-  assert.equal(docDataset.theme, 'dark');
+  assert.equal(docDataset.theme, 'atelier');
 });
 
 test('nextTheme cycles through the registry in declaration order', () => {
   store.clear();
-  store.set('grok-remote.theme', 'dark');
+  store.set('grok-remote.theme', 'atelier');
+  assert.equal(themes.nextTheme('atelier'),  'dark');
   assert.equal(themes.nextTheme('dark'),     'light');
   assert.equal(themes.nextTheme('light'),    'hacker');
   assert.equal(themes.nextTheme('hacker'),   'unicorn');
@@ -93,7 +94,7 @@ test('nextTheme cycles through the registry in declaration order', () => {
   assert.equal(themes.nextTheme('sunset'),   'midnight');
   assert.equal(themes.nextTheme('midnight'), 'carbon');
   assert.equal(themes.nextTheme('carbon'),   'mocha');
-  assert.equal(themes.nextTheme('mocha'),    'dark');
+  assert.equal(themes.nextTheme('mocha'),    'atelier');
 });
 
 test('getThemeMeta returns the matching theme record', () => {
@@ -105,5 +106,5 @@ test('getThemeMeta returns the matching theme record', () => {
 
 test('getThemeMeta falls back to the first theme for unknown names', () => {
   const meta = themes.getThemeMeta('mystery');
-  assert.equal(meta.name, 'dark');
+  assert.equal(meta.name, 'atelier');
 });

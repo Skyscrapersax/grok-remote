@@ -127,6 +127,33 @@ export const api = {
   getSettings:  (): Promise<unknown> => request('GET',    '/api/settings'),
   patchSettings:(body: Record<string, unknown>): Promise<unknown> => request('PATCH', '/api/settings', body),
 
+  /** Desk continuity — ~/.grok-remote/desk.json */
+  getDesk: (): Promise<unknown> => request('GET', '/api/desk'),
+  patchDesk: (body: Record<string, unknown>): Promise<unknown> =>
+    request('PATCH', '/api/desk', body),
+  desk: {
+    get: (): Promise<unknown> => request('GET', '/api/desk'),
+    put: (desk: Record<string, unknown>): Promise<unknown> =>
+      request('PUT', '/api/desk', { desk }),
+    patch: (desk: Record<string, unknown>): Promise<unknown> =>
+      request('PATCH', '/api/desk', desk),
+  },
+
+  term: {
+    list:   (): Promise<unknown> => request('GET', '/api/term'),
+    create: (body?: Record<string, unknown>): Promise<unknown> => request('POST', '/api/term', body || {}),
+    get:    (id: string): Promise<unknown> => request('GET', `/api/term/${encodeURIComponent(id)}`),
+    kill:   (id: string): Promise<unknown> => request('DELETE', `/api/term/${encodeURIComponent(id)}`),
+    resize: (id: string, cols: number, rows: number): Promise<unknown> =>
+      request('POST', `/api/term/${encodeURIComponent(id)}/resize`, { cols, rows }),
+  },
+
+  deck: {
+    status: (): Promise<unknown> => request('GET', '/api/deck/status'),
+    launch: (target: 'grokterm' | 'grok-dashboard', cwd?: string): Promise<unknown> =>
+      request('POST', '/api/deck/launch', { target, ...(cwd ? { cwd } : {}) }),
+  },
+
   mcp: {
     list:     (): Promise<unknown>      => request('GET',    '/api/system/mcp'),
     add:      (body?: Record<string, unknown>): Promise<unknown>  => request('POST',   '/api/system/mcp', body || {}),

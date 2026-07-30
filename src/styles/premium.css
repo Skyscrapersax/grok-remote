@@ -1,0 +1,2719 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Atelier shell — Craft desk (Deck + Dash + Term)
+   Wood chassis, brass fittings, ink on paper. Sharp corners.
+   No neon glows, gradient text, floating glass, or pill-everything chrome.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Chrome ─────────────────────────────────────────────────────── */
+.topbar {
+  padding: 0 18px;
+  height: 44px;
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.brand {
+  gap: 9px;
+}
+.brand-name {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  color: var(--text);
+  background: none;
+  -webkit-text-fill-color: unset;
+}
+.brand-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px; /* square rivet, not orb */
+  background: linear-gradient(135deg, var(--brass-bright, var(--brass, var(--teal))), var(--brass, var(--teal)) 55%, var(--brass-deep, var(--teal)));
+  border: 1px solid var(--brass-deep, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--brass-deep, var(--teal)) 40%, transparent),
+    0 1px 0 rgba(255, 240, 200, 0.16) inset;
+  animation: none;
+  box-sizing: border-box;
+}
+.brand-active {
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  animation: none;
+  background: var(--ochre, var(--amber));
+}
+.status-text {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+.theme-toggle,
+.topbar-btn,
+.topbar-icon-btn {
+  border-radius: 3px;
+  font-family: var(--sans);
+  font-size: 12px;
+}
+.status-pill {
+  border-radius: 2px;
+  width: 16px;
+  height: 16px;
+  font-weight: 500;
+}
+
+/* Buttons: brass metal plaques / etched ghost wood */
+.btn {
+  border-radius: 3px !important;
+  transform: none !important;
+  box-shadow: none !important;
+  font-family: var(--sans) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  padding: 7px 12px !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-2) !important;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease !important;
+}
+.btn:hover:not(:disabled) {
+  background: rgba(240, 220, 180, 0.045) !important;
+  border-color: var(--border-2) !important;
+}
+.btn--primary {
+  background: var(--brass-face, var(--brass, var(--teal))) !important;
+  color: var(--ink-on-brass, #1a140c) !important;
+  border-color: var(--brass-deep, var(--teal)) !important;
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.22);
+  box-shadow: var(--shadow-metal, var(--shadow-inset, none)) !important;
+}
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+  border-color: var(--brass, var(--teal)) !important;
+  color: var(--ink-on-brass, #1a140c) !important;
+  background: var(--brass-face, var(--brass-bright, var(--teal))) !important;
+}
+.btn--primary:active:not(:disabled) {
+  filter: brightness(0.97);
+  box-shadow:
+    0 1px 2px rgba(10, 6, 3, 0.45) inset !important;
+}
+.btn--ghost {
+  color: var(--muted) !important;
+  background: transparent !important;
+}
+.btn--ghost:hover:not(:disabled) {
+  color: var(--text) !important;
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 35%, var(--border)) !important;
+  background: color-mix(in srgb, var(--brass, var(--teal)) 7%, transparent) !important;
+}
+
+/* ── Deck ───────────────────────────────────────────────────────── */
+.deck {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 28px 40px;
+  box-sizing: border-box;
+  position: relative;
+  background: var(--bg);
+}
+.deck::before {
+  display: none; /* no hero glow wash */
+}
+.deck > * { position: relative; z-index: 1; }
+
+.deck-hero {
+  margin-bottom: 32px;
+  max-width: 640px;
+  animation: none;
+  border-bottom: 1px solid var(--border);
+  /* left brass tick on the desk rule */
+  box-shadow: inset 48px -1px 0 -0.5px color-mix(in srgb, var(--brass, var(--teal)) 55%, transparent);
+  padding-bottom: 28px;
+}
+.deck-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.deck-hero-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+.deck-hero-badge::before { display: none; }
+
+.deck-hero-title {
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--text);
+  background: none;
+  -webkit-text-fill-color: unset;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+}
+
+.deck-hero-sub {
+  margin: 0 0 20px;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 48ch;
+  letter-spacing: 0;
+}
+.deck-hero-sub strong {
+  color: var(--text);
+  font-weight: 550;
+}
+.deck-hero-sub code {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 5px;
+}
+
+.deck-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  max-width: 720px;
+  box-shadow: var(--shadow-tray, none);
+}
+.deck-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 0;
+  border: none;
+  background: var(--wood-3, var(--panel));
+  backdrop-filter: none;
+  box-shadow: none;
+  animation: none;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+.deck-pill:hover {
+  transform: none;
+  background: var(--wood-4, var(--panel-2));
+  box-shadow: var(--shadow-inset, none);
+}
+.deck-pill-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+}
+.deck-pill-detail {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.deck-pill--ok { background: var(--wood-3, var(--panel)); }
+.deck-pill--ok .deck-pill-detail { color: var(--brass, var(--teal)); }
+.deck-pill--warn .deck-pill-detail { color: var(--ochre, var(--amber)); }
+.deck-pill--bad .deck-pill-detail { color: var(--oxide, var(--red)); }
+.deck-pill--idle .deck-pill-detail { color: var(--muted); }
+
+.deck-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.deck-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 2px);
+  padding: 18px 18px 16px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--wood-3, var(--panel)) 90%, var(--brass, var(--teal))) 0%,
+      var(--wood-3, var(--panel)) 34%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 188px;
+  overflow: hidden;
+  box-shadow: var(--shadow-desk, var(--shadow-tray, none));
+  outline: 1px solid color-mix(in srgb, var(--wood-0, #0f0d0b) 72%, transparent);
+  outline-offset: 2px;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  animation: none;
+  cursor: pointer;
+}
+.deck-card::before { display: none; }
+.deck-card:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 30%, var(--border));
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--wood-4, var(--panel-2)) 88%, var(--brass, var(--teal))) 0%,
+      var(--wood-4, var(--panel-2)) 38%);
+  box-shadow: var(--shadow-desk, var(--shadow-md, none));
+}
+.deck-card > * { position: relative; z-index: 1; }
+.deck-card:hover .deck-card-icon {
+  color: var(--brass, var(--teal));
+  border-color: var(--brass-line, var(--border-2));
+  background: var(--brass-wash, transparent);
+}
+
+.deck-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  margin-bottom: 4px;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.deck-card-icon svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+.deck-card--term .deck-card-icon,
+.deck-card--remote .deck-card-icon,
+.deck-card--grokterm .deck-card-icon,
+.deck-card--dash .deck-card-icon {
+  color: var(--muted);
+}
+
+.deck-card-kicker {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.deck-card-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.deck-card-body {
+  margin: 0;
+  flex: 1;
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.deck-card-body code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text);
+}
+.deck-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.deck-card-actions a.btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.deck-lower {
+  display: grid;
+  grid-template-columns: 1.35fr 0.9fr;
+  gap: 12px;
+  animation: none;
+}
+
+.deck-flow,
+.deck-shortcuts-panel {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 16px 16px 14px;
+  background: var(--wood-3, var(--panel));
+  box-shadow: var(--shadow-tray, none);
+}
+
+.deck-flow-title,
+.deck-shortcuts-title {
+  margin: 0 0 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.deck-flow-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.deck-flow-list li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.deck-flow-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--brass, var(--muted));
+  background: transparent;
+  border: 1px solid var(--border-2);
+}
+.deck-flow-list strong { color: var(--text); font-weight: 550; }
+
+.deck-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--muted);
+}
+.deck-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.deck-shortcut kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  min-width: 56px;
+  text-align: left;
+  padding: 3px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border-2);
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow-sm, none);
+}
+
+.deck-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 8px 14px;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--panel-2);
+  border: 1px solid var(--border-2);
+  color: var(--text);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(12, 8, 4, 0.42));
+  backdrop-filter: none;
+  animation: none;
+}
+.deck-toast--warn {
+  border-color: color-mix(in srgb, var(--red) 50%, var(--border));
+  color: var(--red);
+}
+
+@media (max-width: 960px) {
+  .deck-panels,
+  .deck-lower { grid-template-columns: 1fr; }
+  .deck-hero-title { font-size: 24px; }
+  .deck { padding: 18px 14px 28px; }
+}
+
+/* ── Dash ───────────────────────────────────────────────────────── */
+.dash {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 16px 18px 12px;
+  gap: 10px;
+  box-sizing: border-box;
+  position: relative;
+  background: var(--bg);
+}
+
+.dash-header { flex: 0 0 auto; animation: none; }
+.dash-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dash-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+.dash-header-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 0;
+}
+.dash-sub {
+  margin: 6px 0 0;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.dash-sub code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text);
+}
+.dash-sub kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--border-2);
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow-sm, none);
+}
+
+.dash-voice-chip {
+  margin-left: auto;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.dash-voice-chip:hover {
+  color: var(--text);
+  border-color: var(--border-2);
+  background: rgba(240, 220, 180, 0.04);
+}
+.dash-voice-chip--ok {
+  color: var(--brass, var(--teal));
+  border-color: var(--brass-line, color-mix(in srgb, var(--teal) 40%, var(--border)));
+  background: var(--brass-wash, transparent);
+}
+.dash-voice-chip--bad {
+  color: var(--oxide, var(--red));
+  border-color: color-mix(in srgb, var(--oxide, var(--red)) 40%, var(--border));
+}
+
+.dash-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.dash-toolbar .dash-search { flex: 1; }
+.dash-search {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--wood-1, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 2px);
+  color: var(--ink, var(--text));
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+.dash-search::placeholder { color: var(--dim); }
+.dash-search:focus {
+  outline: none;
+  border-color: var(--brass-line, var(--teal));
+  background: color-mix(in srgb, var(--brass, var(--teal)) 6%, var(--wood-1, var(--bg)));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass, var(--teal)) 20%, transparent);
+}
+.dash-group-btn { white-space: nowrap; flex: 0 0 auto; }
+
+.dash-board {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.85fr);
+  gap: 10px;
+}
+.dash-board-list {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--panel);
+  overflow: hidden;
+  box-shadow: var(--shadow-tray, none);
+}
+.dash-board-list .dash-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.dash-empty {
+  padding: 40px 16px;
+  text-align: left;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dash-section {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  border-bottom: 1px solid var(--border);
+}
+.dash-section:last-child { border-bottom: 0; }
+
+.dash-section-title {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-soft);
+  border: 0;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.dash-section-title:hover { background: var(--panel-2); }
+.dash-section-chevron { color: var(--dim); width: 1em; font-size: 10px; }
+.dash-section-label {
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--dim);
+}
+.dash-section-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  min-width: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 0;
+}
+.dash-section-body { border-top: 1px solid var(--border); }
+
+.dash-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.dash-row:last-child { border-bottom: 0; }
+.dash-row:hover { background: rgba(240, 220, 180, 0.03); }
+.dash-row--selected {
+  background: var(--brass-wash, color-mix(in srgb, var(--brass, var(--teal)) 12%, var(--panel)));
+  box-shadow: inset 2px 0 0 var(--brass, var(--teal));
+}
+
+.dash-dot {
+  display: inline-flex;
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  margin-left: 4px;
+  border-radius: 1px; /* square status marks */
+  font-size: 0;
+  background: currentColor;
+  box-shadow: none;
+}
+.dash-dot--working {
+  color: var(--brass, var(--teal));
+  animation: brass-pulse 1.8s ease-in-out infinite;
+}
+@keyframes brass-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-dot--working { animation: none; }
+}
+.dash-dot--needs { color: var(--oxide, var(--red)); }
+.dash-dot--starting { color: var(--ochre, var(--amber)); }
+.dash-dot--idle { color: var(--dim); opacity: 1; }
+.dash-dot--disconnected { color: var(--dim); opacity: 0.55; }
+.dash-dot--archived { color: var(--dim); opacity: 0.4; }
+
+.dash-row-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dash-row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--sans);
+}
+.dash-star { color: var(--amber); font-size: 11px; }
+.dash-name {
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.dash-model {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 6px;
+  background: transparent;
+}
+.dash-row-activity {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-row--working .dash-row-activity { color: var(--brass, var(--teal)); }
+.dash-row--needs .dash-row-activity { color: var(--oxide, var(--red)); }
+.dash-row-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--dim);
+  min-width: 0;
+}
+.dash-cwd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 42vw;
+}
+.dash-cwd--empty { opacity: 0.55; font-style: italic; }
+
+.dash-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  max-width: 240px;
+  opacity: 0.55;
+}
+.dash-row:hover .dash-row-actions,
+.dash-row--selected .dash-row-actions { opacity: 1; }
+.dash-act {
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  border-radius: 2px !important;
+}
+.dash-act--danger:hover {
+  color: var(--red) !important;
+  border-color: color-mix(in srgb, var(--red) 45%, var(--border)) !important;
+}
+
+.dash-peek {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 2px);
+  /* Paper slip on the wood roster */
+  background: var(--paper-0, var(--paper-soft, var(--panel)));
+  overflow: hidden;
+  box-shadow: var(--shadow-tray, none);
+}
+.dash-peek-title {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-mute, var(--muted));
+  border-bottom: 1px solid var(--border);
+  background: var(--paper-1, var(--paper, var(--bg-soft)));
+}
+.dash-peek-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--paper-0, var(--paper-soft, transparent));
+}
+.dash-peek-empty {
+  color: var(--ink-faint, var(--dim));
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: left;
+  padding: 16px 4px;
+}
+.dash-peek-status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-radius: 2px;
+  background: var(--wood-1, var(--bg));
+  border: 1px solid var(--border);
+}
+.dash-peek-line {
+  border-radius: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--paper-1, var(--paper, var(--bg)));
+}
+.dash-peek-line--user {
+  border-left: 2px solid var(--brass, var(--teal));
+  color: color-mix(in srgb, var(--brass, var(--teal)) 55%, var(--ink, var(--text)));
+}
+.dash-peek-line--assistant {
+  border-left: 2px solid var(--border-2);
+  color: var(--ink-soft, var(--text));
+}
+.dash-peek-line--tool {
+  border-left: 2px solid var(--ink-faint, var(--dim));
+  background: var(--wood-1, var(--bg));
+}
+.dash-peek-line--tool .dash-peek-text {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-faint, var(--dim));
+}
+.dash-peek-role {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 3px;
+}
+.dash-peek-text {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.dash-peek-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+.dash-peek-reply {
+  margin: 0 10px 10px;
+  width: calc(100% - 20px);
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 56px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: var(--paper-1, var(--bg));
+  color: var(--ink, var(--text));
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  line-height: 1.45;
+}
+.dash-peek-reply:focus {
+  outline: none;
+  border-color: var(--brass-line, var(--teal));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass, var(--teal)) 18%, transparent);
+}
+
+.dash-dispatch {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 10px;
+  background: var(--wood-3, var(--panel));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-tray, none);
+}
+.dash-dispatch-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.dash-dispatch-name,
+.dash-dispatch-cwd,
+.dash-dispatch-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 7px 10px;
+}
+.dash-dispatch-input {
+  resize: vertical;
+  min-height: 48px;
+  line-height: 1.45;
+}
+.dash-dispatch-name:focus,
+.dash-dispatch-cwd:focus,
+.dash-dispatch-input:focus {
+  outline: none;
+  border-color: var(--brass-line, var(--teal));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass, var(--teal)) 18%, transparent);
+}
+.dash-dispatch-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dash-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 8px 14px;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--panel-2);
+  border: 1px solid var(--border-2);
+  color: var(--text);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(12, 8, 4, 0.42));
+  animation: none;
+}
+.dash-toast--warn { border-color: color-mix(in srgb, var(--oxide, var(--red)) 50%, var(--border)); color: var(--oxide, var(--red)); }
+.dash-toast--ok { border-color: var(--brass-line, color-mix(in srgb, var(--teal) 40%, var(--border))); color: var(--brass, var(--teal)); }
+
+@media (max-width: 980px) {
+  .dash-board { grid-template-columns: 1fr; }
+  .dash-peek { min-height: 220px; }
+  .dash { padding: 12px 10px 10px; }
+  .dash-row { grid-template-columns: 18px 1fr; }
+  .dash-row-actions {
+    grid-column: 1 / -1;
+    max-width: none;
+    justify-content: flex-start;
+  }
+  .dash-dispatch-meta { grid-template-columns: 1fr; }
+}
+
+/* ── Shell-wide craft desk (sidebar / chat / term / chrome) ─────────── */
+
+body[data-shell="atelier"] .topbar {
+  background: linear-gradient(180deg, var(--wood-2, var(--bg-soft)) 0%, var(--wood-1, var(--bg)) 100%);
+  border-bottom-color: var(--border);
+  box-shadow: 0 1px 0 rgba(240, 220, 180, 0.03);
+}
+
+body[data-shell="atelier"] .sidebar {
+  background: var(--bg-soft);
+  border-right: 1px solid var(--border);
+}
+
+body[data-shell="atelier"] .agent-item {
+  border-radius: 2px;
+  margin: 1px 6px;
+}
+body[data-shell="atelier"] .agent-item:hover {
+  background: rgba(240, 220, 180, 0.035);
+}
+body[data-shell="atelier"] .agent-item.active,
+body[data-shell="atelier"] .agent-item--selected {
+  background: color-mix(in srgb, var(--brass, var(--teal)) 9%, var(--panel));
+  box-shadow: inset 2px 0 0 var(--brass, var(--teal));
+}
+
+/* Composer = raised tray; stream = recessed well */
+body[data-shell="atelier"] .composer {
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--panel) 92%, var(--brass, var(--teal))) 0%,
+      var(--panel) 40%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-desk, var(--shadow-tray));
+}
+body[data-shell="atelier"] .chat-stream {
+  background: var(--wood-0, var(--bg));
+  box-shadow: var(--shadow-well);
+  border-radius: 2px;
+}
+body[data-shell="atelier"] .agents-form,
+body[data-shell="atelier"] .tool-card,
+body[data-shell="atelier"] .settings-card,
+body[data-shell="atelier"] .modal,
+body[data-shell="atelier"] .command-palette,
+body[data-shell="atelier"] .desk-palette-shell,
+body[data-shell="atelier"] .desk-help-shell {
+  border-radius: 2px;
+}
+
+body[data-shell="atelier"] .composer-input,
+body[data-shell="atelier"] textarea,
+body[data-shell="atelier"] input[type="text"],
+body[data-shell="atelier"] input[type="search"] {
+  border-radius: 2px;
+  font-family: var(--sans);
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--wood-0, var(--bg)) 55%, var(--panel));
+}
+body[data-shell="atelier"] .composer-input:focus,
+body[data-shell="atelier"] textarea:focus,
+body[data-shell="atelier"] input[type="text"]:focus,
+body[data-shell="atelier"] input[type="search"]:focus {
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 45%, var(--border));
+  outline: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass, var(--teal)) 22%, transparent);
+}
+
+body[data-shell="atelier"] .tab {
+  border-radius: 2px 2px 0 0;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+/* Chat stream: real .msg* classes (replaces dead .message-bubble*) */
+body[data-shell="atelier"] .msg {
+  max-width: min(72ch, 100%);
+}
+body[data-shell="atelier"] .msg-role {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+body[data-shell="atelier"] .msg-body {
+  border-radius: 2px !important;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  box-shadow: 0 1px 0 rgba(240, 220, 180, 0.035) inset;
+}
+body[data-shell="atelier"] .msg--assistant .msg-body {
+  background: var(--paper-0, var(--paper, var(--panel)));
+  border: 1px solid var(--border);
+  border-bottom-right-radius: 2px !important;
+}
+body[data-shell="atelier"] .msg--user .msg-body {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--brass, var(--teal)) 14%, var(--panel)) 0%,
+      color-mix(in srgb, var(--brass, var(--teal)) 8%, var(--panel)) 100%);
+  border: 1px solid color-mix(in srgb, var(--brass, var(--teal)) 38%, var(--border));
+  border-bottom-right-radius: 2px !important;
+}
+body[data-shell="atelier"] .msg--user .msg-role {
+  color: var(--brass, var(--teal));
+}
+body[data-shell="atelier"] .tool-pill {
+  border-radius: 2px !important;
+  border-color: var(--border);
+  background: var(--wood-2, var(--bg-soft));
+}
+body[data-shell="atelier"] .tool-pill--open {
+  border-radius: 2px !important;
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 40%, var(--border));
+  box-shadow: var(--shadow-well);
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .tool-pill__head:hover {
+  background: rgba(240, 220, 180, 0.04);
+}
+
+/* Quiet desk empty state (hides figlet under atelier) */
+body[data-shell="atelier"] .chat-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 48px 24px 32px;
+  max-width: 40ch;
+}
+body[data-shell="atelier"] .chat-intro-figlet {
+  display: none !important;
+}
+body[data-shell="atelier"] .chat-intro-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+body[data-shell="atelier"] .chat-intro-sub {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+}
+
+/* Term — instrument strip + ink well */
+body[data-shell="atelier"] .term-view {
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .term-surface,
+body[data-shell="atelier"] .term-host {
+  background: var(--wood-0, #0f0d0b);
+  box-shadow: var(--shadow-well);
+}
+body[data-shell="atelier"] .term-toolbar {
+  background: linear-gradient(180deg, var(--wood-2, var(--bg-soft)) 0%, var(--wood-1, var(--bg)) 100%);
+  border-bottom-color: var(--border);
+  box-shadow: 0 1px 0 rgba(240, 220, 180, 0.03);
+}
+body[data-shell="atelier"] .term-toolbar-brand {
+  border-right-color: var(--border);
+}
+body[data-shell="atelier"] .term-toolbar-mark {
+  border-radius: 2px;
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 38%, var(--border));
+  background: color-mix(in srgb, var(--brass, var(--teal)) 10%, transparent);
+  color: var(--brass, var(--teal));
+  box-shadow: 0 1px 0 rgba(255, 240, 200, 0.08) inset;
+}
+body[data-shell="atelier"] .term-toolbar-title {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+body[data-shell="atelier"] .term-toolbar-sub {
+  font-family: var(--mono);
+  color: var(--dim);
+  letter-spacing: 0.08em;
+}
+body[data-shell="atelier"] .term-tab {
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+body[data-shell="atelier"] .term-tab--active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 42%, var(--border));
+  background: color-mix(in srgb, var(--brass, var(--teal)) 11%, var(--panel));
+  box-shadow:
+    inset 0 -2px 0 var(--brass, var(--teal)),
+    0 1px 0 rgba(240, 220, 180, 0.04) inset;
+}
+body[data-shell="atelier"] .term-tab-status {
+  border-radius: 1px;
+}
+body[data-shell="atelier"] .term-tab-status--live {
+  background: var(--patina, var(--green));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--patina, var(--green)) 40%, black);
+}
+body[data-shell="atelier"] .term-tab-status--dead {
+  background: var(--oxide, var(--red));
+}
+body[data-shell="atelier"] .term-action {
+  border-radius: 2px;
+  font-family: var(--sans);
+  font-weight: 500;
+}
+body[data-shell="atelier"] .term-action--primary {
+  background: var(--brass, var(--teal)) !important;
+  color: var(--ink-on-brass, #1a140c) !important;
+  border-color: var(--brass-deep, var(--teal)) !important;
+  box-shadow: var(--shadow-inset, none);
+  text-shadow: none;
+}
+body[data-shell="atelier"] .term-action--primary:hover:not(:disabled) {
+  background: var(--brass-bright, var(--brass, var(--teal))) !important;
+  border-color: var(--brass, var(--teal)) !important;
+  color: var(--ink-on-brass, #1a140c) !important;
+}
+body[data-shell="atelier"] .term-meta {
+  border-top-color: var(--border);
+  background: color-mix(in srgb, var(--wood-0, #0f0d0b) 75%, var(--panel));
+  font-family: var(--mono);
+}
+body[data-shell="atelier"] .term-meta-pill {
+  border-radius: 2px;
+}
+body[data-shell="atelier"] .term-native-note {
+  border-radius: 2px;
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 28%, var(--border));
+  background: var(--panel);
+  box-shadow: var(--shadow-tray);
+}
+
+/* Quiet working indicators — square LEDs, no neon halo */
+body[data-shell="atelier"] .agent-inflight-dot,
+body[data-shell="atelier"] .tab-inflight-dot,
+body[data-shell="atelier"] .topbar-bg__dot {
+  border-radius: 1px;
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+/* Dash logbook */
+body[data-shell="atelier"] .dash-row .dash-name {
+  font-feature-settings: "ss01" on;
+  letter-spacing: -0.005em;
+}
+body[data-shell="atelier"] .dash-row--selected {
+  background: color-mix(in srgb, var(--brass, var(--teal)) 8%, var(--panel));
+  box-shadow: inset 2px 0 0 var(--brass, var(--teal));
+}
+body[data-shell="atelier"] .dash-peek {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--panel) 92%, var(--brass, var(--teal))) 0%,
+      var(--panel) 30%);
+  box-shadow: var(--shadow-desk, var(--shadow-tray));
+  border-color: var(--border);
+}
+body[data-shell="atelier"] .dash-board-list {
+  box-shadow: var(--shadow-well);
+  background: var(--wood-0, var(--bg));
+  border-radius: 2px;
+}
+
+/* ── Desk keyboard control plane ─────────────────────────────────────── */
+
+.deck:focus {
+  outline: none;
+}
+
+.deck-key-hint {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+}
+
+.deck-key-hint kbd,
+.deck-shortcut kbd,
+.dash-sub kbd,
+.term-key-chip kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--border-2);
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--wood-3, var(--panel)) 0%, var(--wood-2, var(--bg-soft)) 100%);
+  color: var(--text);
+  font-size: 11px;
+  font-family: var(--mono);
+  line-height: 1.3;
+  box-shadow:
+    0 1px 0 rgba(240, 220, 180, 0.08) inset,
+    0 1px 0 rgba(10, 6, 3, 0.35);
+}
+
+.deck-card {
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.deck-card--focused {
+  border-color: color-mix(in srgb, var(--brass, var(--teal)) 50%, var(--border)) !important;
+  box-shadow:
+    var(--shadow-desk, var(--shadow-md)),
+    0 0 0 1px color-mix(in srgb, var(--brass, var(--teal)) 35%, transparent);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--panel) 86%, var(--brass, var(--teal))) 0%,
+      color-mix(in srgb, var(--brass, var(--teal)) 6%, var(--panel)) 40%) !important;
+}
+
+/* Brass corner tick — signature plate detail */
+.deck-card--focused::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-top: 1px solid var(--brass, var(--teal));
+  border-right: 1px solid var(--brass, var(--teal));
+  opacity: 0.9;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.deck-card--focused .deck-card-kicker {
+  color: var(--brass, var(--teal));
+}
+.deck-card--focused .deck-card-icon {
+  color: var(--brass, var(--teal));
+  border-color: var(--brass-line, var(--border-2));
+  background: var(--brass-wash, transparent);
+}
+
+.term-key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+}
+
+.term-prefix-hint {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--ink-on-brass, #1a140c);
+  background: var(--brass-face, var(--brass, var(--teal)));
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+  border-bottom: 1px solid var(--brass-deep, color-mix(in srgb, var(--teal) 40%, var(--border)));
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.2);
+  box-shadow: 0 1px 0 rgba(255, 240, 200, 0.12) inset;
+}
+
+.term-prefix-hint kbd {
+  padding: 0 4px;
+  border: 1px solid color-mix(in srgb, var(--ink-on-brass, #1a140c) 35%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink-on-brass, #1a140c) 10%, transparent);
+  color: var(--ink-on-brass, #1a140c);
+  font-size: 11px;
+}
+
+body[data-desk-term-prefix] .term-view {
+  outline: 1px solid color-mix(in srgb, var(--brass, var(--teal)) 50%, transparent);
+  outline-offset: -1px;
+}
+
+body[data-desk-chord="g"] .brand-name::after {
+  content: " · g…";
+  color: var(--brass, var(--teal));
+  font-weight: 500;
+}
+
+/* Command palette + help overlays — tray on wood, no glass blur */
+.desk-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(12, 8, 4, 0.62);
+  backdrop-filter: none;
+}
+
+.desk-palette {
+  position: fixed;
+  inset: 0;
+  z-index: 9001;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh 16px 16px;
+  pointer-events: none;
+}
+
+.desk-palette[hidden],
+.desk-help[hidden],
+.desk-overlay-backdrop[hidden] {
+  display: none !important;
+}
+
+.desk-palette-shell {
+  pointer-events: auto;
+  width: min(560px, 100%);
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm, 2px);
+  box-shadow: var(--shadow-lg, 0 14px 36px rgba(10, 6, 3, 0.5)), var(--shadow-inset, none);
+  overflow: hidden;
+}
+
+.desk-palette-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 14px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.desk-palette-chord {
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.desk-palette-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  font-family: var(--font-sans, "IBM Plex Sans", system-ui, sans-serif);
+  padding: 12px 14px 14px;
+  outline: none;
+}
+
+.desk-palette-list {
+  max-height: min(48vh, 360px);
+  overflow: auto;
+}
+
+.desk-palette-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: transparent;
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.desk-palette-item:last-child {
+  border-bottom: none;
+}
+
+.desk-palette-item--active,
+.desk-palette-item:hover {
+  background: color-mix(in srgb, var(--teal) 10%, var(--panel));
+}
+
+.desk-palette-item-hint {
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.desk-palette-item-group {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.desk-palette-empty {
+  padding: 20px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.desk-palette-hint {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg-soft, var(--bg));
+}
+
+.desk-palette-hint kbd {
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: 10px;
+}
+
+.desk-help {
+  position: fixed;
+  inset: 0;
+  z-index: 9001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  pointer-events: none;
+}
+
+.desk-help-shell {
+  pointer-events: auto;
+  width: min(820px, 100%);
+  max-height: min(84vh, 720px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.desk-help-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: start;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
+}
+
+.desk-help-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.desk-help-sub {
+  margin: 0;
+  grid-column: 1;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.desk-help-close {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+}
+
+.desk-help-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px 20px;
+  padding: 14px 18px 18px;
+}
+
+.desk-help-section-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+.desk-help-section--here .desk-help-section-title {
+  color: var(--teal);
+}
+
+.desk-help-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.desk-help-row {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.desk-help-keys {
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+  font-size: 11px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg-soft, var(--bg));
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.desk-help-desc {
+  color: var(--text);
+}
+
+.desk-help-foot {
+  padding: 10px 18px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.desk-help-foot kbd {
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: 10px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Elevation pass — material hierarchy + signature details
+   (CRAFT-DESK-ELEVATION.md §4–7, PR2/PR3)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Brass hairline under brand — stamped metal on wood chassis */
+body[data-shell="atelier"] .brand {
+  position: relative;
+  padding-bottom: 2px;
+}
+body[data-shell="atelier"] .brand::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 28px;
+  height: 1px;
+  background: color-mix(in srgb, var(--brass) 55%, transparent);
+}
+
+/* Left rail = wood instrument strip */
+body[data-shell="atelier"] .left-rail {
+  background: var(--wood-2, var(--bg-soft));
+  border-right: 1px solid var(--border);
+  box-shadow: var(--shadow-sm, none);
+}
+body[data-shell="atelier"] .left-rail-item {
+  border-radius: 2px;
+  color: var(--ink-mute, var(--muted));
+}
+body[data-shell="atelier"] .left-rail-item:hover {
+  background: rgba(240, 220, 180, 0.035);
+  color: var(--ink, var(--text));
+}
+body[data-shell="atelier"] .left-rail-item--active {
+  color: var(--ink, var(--text));
+  background: color-mix(in srgb, var(--brass) 8%, var(--wood-3, var(--panel)));
+}
+body[data-shell="atelier"] .left-rail-item--active::before {
+  background: var(--brass) !important;
+  width: 2px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Deck ground + card icon transition (signature tray hardware) */
+body[data-shell="atelier"] .deck {
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .deck-card-icon {
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+body[data-shell="atelier"] .deck-card--focused {
+  border-color: var(--brass-line, var(--border-2)) !important;
+  background: color-mix(in srgb, var(--brass) 6%, var(--wood-3, var(--panel))) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(240, 220, 180, 0.04),
+    0 0 0 1px color-mix(in srgb, var(--brass) 28%, transparent) !important;
+}
+
+/* Dash board + dispatch as wood tray; peek already paper */
+body[data-shell="atelier"] .dash {
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .dash-board-list {
+  background: var(--wood-0, var(--bg));
+  box-shadow: var(--shadow-well, var(--shadow-tray, none));
+  border-radius: 2px;
+}
+body[data-shell="atelier"] .dash-dispatch {
+  background: var(--wood-3, var(--panel));
+  box-shadow: var(--shadow-tray, none);
+}
+body[data-shell="atelier"] .dash-dispatch-input:focus,
+body[data-shell="atelier"] .dash-dispatch-name:focus,
+body[data-shell="atelier"] .dash-dispatch-cwd:focus {
+  border-color: var(--brass-line, var(--teal));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass) 18%, transparent);
+  outline: none;
+}
+body[data-shell="atelier"] .dash-peek-reply {
+  background: var(--paper-1, var(--paper, var(--bg)));
+  color: var(--ink, var(--text));
+}
+
+/* Chat stream slips — reinforce 2px paper (hierarchy set above) */
+body[data-shell="atelier"] .msg-body {
+  border-radius: 2px !important;
+  box-shadow: 0 1px 0 rgba(240, 220, 180, 0.035) inset;
+}
+body[data-shell="atelier"] .msg--assistant.msg--done .msg-body {
+  border-color: var(--border-2);
+}
+
+/* Composer tray stays raised plate; input is recessed paper field */
+body[data-shell="atelier"] .composer {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--panel) 92%, var(--brass, var(--teal))) 0%,
+      var(--panel) 40%) !important;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-desk, var(--shadow-tray)) !important;
+}
+body[data-shell="atelier"] .composer-input {
+  background: color-mix(in srgb, var(--wood-0, var(--bg)) 40%, var(--paper-1, var(--panel)));
+  border: 1px solid var(--border);
+  color: var(--ink, var(--text));
+  border-radius: 2px;
+}
+body[data-shell="atelier"] .composer-input:focus {
+  border-color: var(--brass-line, var(--teal));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass) 18%, transparent);
+  outline: none;
+}
+body[data-shell="atelier"] .composer-voice--on {
+  color: var(--brass) !important;
+  border-color: var(--brass-line) !important;
+  background: var(--brass-wash) !important;
+  box-shadow: none !important;
+}
+body[data-shell="atelier"] .composer-voice--speaking {
+  animation: brass-pulse 1.4s ease-in-out infinite;
+}
+
+/* Tool cards — wood chips, not glass */
+body[data-shell="atelier"] .tool-card {
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm, none);
+}
+
+/* Keyboard plaques — pressable stamped keys */
+body[data-shell="atelier"] .deck-key-hint kbd,
+body[data-shell="atelier"] .deck-shortcut kbd,
+body[data-shell="atelier"] .dash-sub kbd,
+body[data-shell="atelier"] .term-key-chip kbd,
+body[data-shell="atelier"] .desk-help-keys {
+  background: linear-gradient(180deg, var(--wood-3, var(--panel)) 0%, var(--wood-2, var(--bg-soft)) 100%);
+  border: 1px solid var(--border-2);
+  color: var(--ink, var(--text));
+  box-shadow:
+    0 1px 0 rgba(240, 220, 180, 0.08) inset,
+    0 1px 0 rgba(10, 6, 3, 0.35);
+  border-radius: 2px;
+  font-family: var(--mono);
+}
+
+/* Palette / help — raised tray on lamp-dimmed desk */
+body[data-shell="atelier"] .desk-overlay-backdrop {
+  background: rgba(12, 9, 6, 0.58);
+  backdrop-filter: none;
+}
+body[data-shell="atelier"] .desk-palette-shell,
+body[data-shell="atelier"] .desk-help {
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border-2);
+  border-radius: 3px;
+  box-shadow: var(--shadow-lg, 0 14px 36px rgba(10, 6, 3, 0.5));
+}
+body[data-shell="atelier"] .desk-palette-item--active,
+body[data-shell="atelier"] .desk-palette-item:hover {
+  background: var(--brass-wash, rgba(201, 166, 106, 0.12));
+}
+
+/* ── Elevation finish: material hierarchy signatures ───────────────── */
+
+/* Quiet empty chat (title + mono sub under atelier) */
+body[data-shell="atelier"] .chat-intro--desk {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36vh;
+  padding: 48px 24px 32px;
+  max-width: 40ch;
+  animation: none;
+}
+body[data-shell="atelier"] .chat-intro--desk .chat-intro-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink, var(--text));
+}
+body[data-shell="atelier"] .chat-intro--desk .chat-intro-sub {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint, var(--dim));
+}
+body[data-shell="atelier"] .chat-intro-desk-line {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint, var(--dim));
+}
+body[data-shell="atelier"] .chat-intro-desk-line::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 10px;
+  vertical-align: middle;
+  border: 1px solid var(--brass-line, var(--brass, var(--teal)));
+  background: var(--brass-wash, transparent);
+  border-radius: 1px;
+}
+
+/* Local desk: no PWA install nag */
+body[data-shell="atelier"] #install-banner {
+  display: none !important;
+}
+
+/* Topbar tray: wood strip with warm contact edge */
+body[data-shell="atelier"] .topbar {
+  background: linear-gradient(180deg, var(--wood-2, var(--bg-soft)) 0%, var(--wood-1, var(--bg)) 100%);
+  box-shadow: 0 1px 0 rgba(240, 220, 180, 0.03);
+}
+
+/* Files drawer — paper list on wood (daily path) */
+body[data-shell="atelier"] .files-pane,
+body[data-shell="atelier"] .files-panel,
+body[data-shell="atelier"] .files {
+  background: var(--wood-2, var(--bg-soft));
+}
+body[data-shell="atelier"] .files-row:hover {
+  background: rgba(240, 220, 180, 0.03);
+}
+body[data-shell="atelier"] .files-row--active,
+body[data-shell="atelier"] .files-row.active {
+  background: var(--brass-wash, transparent);
+  box-shadow: inset 2px 0 0 var(--brass, var(--teal));
+}
+
+/* Settings cards as wood trays */
+body[data-shell="atelier"] .settings-card {
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: var(--shadow-tray, none);
+}
+
+/* ── Chat cwd chip (desk path plate) ───────────────────────────────── */
+.chat-cwd-chip {
+  flex: 0 1 auto;
+  max-width: min(36vw, 280px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ink-mute, var(--muted));
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 3px 8px;
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.3;
+}
+.chat-cwd-chip:hover {
+  color: var(--ink, var(--text));
+  border-color: var(--border);
+  background: rgba(240, 220, 180, 0.04);
+}
+.chat-cwd-chip:focus-visible {
+  outline: 1px solid var(--brass, var(--teal));
+  outline-offset: 1px;
+}
+body[data-shell="atelier"] .chat-cwd-chip {
+  color: var(--ink-faint, var(--dim));
+}
+body[data-shell="atelier"] .chat-cwd-chip:hover {
+  color: var(--brass, var(--teal));
+  border-color: var(--brass-line, var(--border));
+  background: var(--brass-wash, transparent);
+}
+
+@media (max-width: 720px) {
+  .chat-cwd-chip {
+    max-width: 42vw;
+    order: 20;
+    flex: 1 1 100%;
+    margin-top: 2px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Residual craft elevation — gutters · thinking · tools · footer · banner
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Split gutters: wood seam with brass hover (not solid teal bar) */
+body[data-shell="atelier"] .gutter {
+  background-color: var(--border) !important;
+  transition: background-color 0.12s ease;
+}
+body[data-shell="atelier"] .gutter:hover {
+  background-color: color-mix(in srgb, var(--brass) 55%, var(--border)) !important;
+}
+body[data-shell="atelier"] .gutter.gutter-horizontal:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brass) 35%, transparent);
+}
+
+/* Chat tools column — wood blotter edge */
+body[data-shell="atelier"] .chat-tools-col {
+  background: var(--wood-2, var(--bg-soft));
+  border-left-color: var(--border);
+}
+body[data-shell="atelier"] .chat-tools-col__head {
+  background: var(--wood-3, var(--panel));
+  border-bottom-color: var(--border);
+}
+body[data-shell="atelier"] .chat-tools-col__title {
+  color: var(--ink-faint, var(--dim));
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+body[data-shell="atelier"] .chat-tools-col__toggle {
+  border-radius: 2px;
+  border-color: var(--border-2);
+  color: var(--ink-mute, var(--muted));
+}
+body[data-shell="atelier"] .chat-tools-col__toggle:hover {
+  color: var(--brass);
+  border-color: var(--brass-line, var(--brass));
+  background: var(--brass-wash, transparent);
+}
+body[data-shell="atelier"] .chat-tools-stream {
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .chat-stream {
+  background: var(--wood-1, var(--bg));
+}
+
+/* Thinking pane — paper note with brass rule (not blue SaaS card) */
+body[data-shell="atelier"] .thinking {
+  background: var(--paper-0, var(--paper-soft, var(--panel-2)));
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--brass-deep, var(--brass));
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm, none);
+}
+body[data-shell="atelier"] .thinking-summary {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--ink-mute, var(--muted));
+}
+body[data-shell="atelier"] .thinking-label {
+  color: var(--brass, var(--teal));
+}
+body[data-shell="atelier"] .thinking-dots {
+  color: var(--brass, var(--teal));
+}
+body[data-shell="atelier"] .thinking-body {
+  color: var(--ink-soft, var(--muted));
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+/* Token / status pills in chat — wood chips */
+body[data-shell="atelier"] .token-footer,
+body[data-shell="atelier"] .inflight-pill,
+body[data-shell="atelier"] .tokens-pill {
+  border-radius: 2px;
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+}
+
+/* Install banner — tray, not marketing toast */
+body[data-shell="atelier"] #install-banner {
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border-2);
+  border-left: 2px solid var(--brass);
+  border-radius: 3px;
+  box-shadow: var(--shadow-md, 0 6px 18px rgba(12, 8, 4, 0.42));
+  font-weight: 500;
+  animation: none;
+}
+body[data-shell="atelier"] #install-banner [data-role="label"]::before {
+  content: "Install · ";
+  color: var(--brass);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+body[data-shell="atelier"] #install-banner button {
+  border-radius: 2px;
+  font-family: var(--sans);
+}
+body[data-shell="atelier"] #install-banner button[data-action="install"] {
+  background: var(--brass);
+  color: var(--ink-on-brass, #1a140c);
+  border-color: var(--brass-deep, var(--brass));
+  font-weight: 500;
+}
+body[data-shell="atelier"] #install-banner button[data-action="install"]:hover {
+  background: var(--brass-bright, var(--brass));
+  filter: none;
+}
+
+/* App footer — chassis baseboard */
+body[data-shell="atelier"] .app-footer {
+  background: var(--wood-2, var(--bg-soft));
+  border-top: 1px solid var(--border);
+  color: var(--ink-mute, var(--muted));
+  font-family: var(--mono);
+  box-shadow: none;
+}
+body[data-shell="atelier"] .app-footer__brand {
+  color: var(--ink-faint, var(--dim));
+  letter-spacing: 0.04em;
+}
+body[data-shell="atelier"] .app-footer__version {
+  color: var(--ink, var(--text));
+  font-weight: 500;
+}
+body[data-shell="atelier"] .app-footer__credit:hover {
+  color: var(--brass);
+}
+body[data-shell="atelier"] .app-footer__left--btn:hover {
+  background: rgba(240, 220, 180, 0.04);
+}
+body[data-shell="atelier"] .app-footer__update-btn {
+  border-radius: 2px;
+  border-color: var(--brass-line, var(--border-2));
+  color: var(--brass);
+  background: var(--brass-wash, transparent);
+}
+body[data-shell="atelier"] .app-footer__hint--ok {
+  color: var(--brass);
+}
+body[data-shell="atelier"] .app-footer__hint-dot {
+  background: var(--brass);
+  border-radius: 1px;
+  box-shadow: none;
+  animation: none;
+}
+
+/* Drawer backdrop — warm lamp dim, not cool glass */
+body[data-shell="atelier"] .drawer-backdrop {
+  background: rgba(12, 9, 6, 0.55);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Files preview — paper sheet */
+body[data-shell="atelier"] .files-pane,
+body[data-shell="atelier"] .files-browser {
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .files-code,
+body[data-shell="atelier"] .files-preview-text {
+  background: var(--paper-0, var(--panel));
+  border-color: var(--border);
+  border-radius: 2px;
+}
+
+/* Empty states — stamped mono on wood */
+body[data-shell="atelier"] .dash-empty,
+body[data-shell="atelier"] .term-tabs-empty,
+body[data-shell="atelier"] .chat-empty {
+  font-family: var(--mono);
+  color: var(--ink-faint, var(--dim));
+  letter-spacing: 0.02em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Elevation follow-up — hierarchy on daily-path chrome still reading utility
+   (CRAFT-DESK-ELEVATION §4 shared chrome, §6 peek/tools, system pages)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Conversation tabs = stamped wood strip with brass under-rule */
+body[data-shell="atelier"] .tabs {
+  background: var(--wood-2, var(--bg-soft));
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm, none);
+  gap: 2px;
+  padding: 6px 10px 0;
+}
+body[data-shell="atelier"] .tab {
+  border-radius: 2px 2px 0 0;
+  color: var(--ink-mute, var(--muted));
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  padding: 7px 11px;
+}
+body[data-shell="atelier"] .tab:hover {
+  color: var(--ink, var(--text));
+  background: rgba(240, 220, 180, 0.035);
+}
+body[data-shell="atelier"] .tab--active {
+  color: var(--ink, var(--text));
+  background: color-mix(in srgb, var(--brass) 8%, var(--wood-3, var(--panel)));
+  border-color: var(--border);
+  box-shadow: inset 0 -1px 0 var(--brass, var(--teal));
+}
+body[data-shell="atelier"] .tab-action {
+  border-radius: 2px;
+  color: var(--ink-mute, var(--muted));
+}
+body[data-shell="atelier"] .tab-action:hover:not(:disabled) {
+  color: var(--ink, var(--text));
+  background: rgba(240, 220, 180, 0.04);
+  border-color: var(--border-2);
+}
+
+/* Tools column = wood instrument tray beside paper stream */
+body[data-shell="atelier"] .chat-tools-col {
+  background: var(--wood-2, var(--bg-soft));
+  border-left: 1px solid var(--border);
+  box-shadow: inset 1px 0 0 rgba(240, 220, 180, 0.03);
+}
+body[data-shell="atelier"] .chat-tools-col__head {
+  background: var(--wood-3, var(--panel));
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm, none);
+}
+body[data-shell="atelier"] .chat-tools-col__title {
+  color: var(--ink-faint, var(--dim));
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+body[data-shell="atelier"] .chat-tools-col__toggle,
+body[data-shell="atelier"] .chat-tools-col__icon-btn {
+  border-radius: 2px;
+  border-color: var(--border);
+  color: var(--ink-mute, var(--muted));
+}
+body[data-shell="atelier"] .chat-tools-col__toggle:hover,
+body[data-shell="atelier"] .chat-tools-col__icon-btn:hover {
+  color: var(--brass, var(--teal));
+  border-color: var(--brass-line, var(--border-2));
+  background: var(--brass-wash, transparent);
+}
+body[data-shell="atelier"] .chat-tools-stream {
+  background: var(--wood-1, var(--bg));
+  box-shadow: var(--shadow-well, none);
+}
+
+/* System admin pages — stop breaking immersion with SaaS cards */
+body[data-shell="atelier"] .system-page {
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .system-page-title {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink, var(--text));
+}
+body[data-shell="atelier"] .system-page .card,
+body[data-shell="atelier"] .system-page .settings-card,
+body[data-shell="atelier"] .system-page section,
+body[data-shell="atelier"] .mcp-card,
+body[data-shell="atelier"] .health-card,
+body[data-shell="atelier"] .settings-shell {
+  border-radius: 2px;
+  border-color: var(--border);
+  background: var(--wood-3, var(--panel));
+  box-shadow: var(--shadow-tray, none);
+}
+
+/* Rail "more" system cluster — quieter wood chips */
+body[data-shell="atelier"] .left-rail-more {
+  border-radius: 2px;
+  color: var(--ink-faint, var(--dim));
+}
+body[data-shell="atelier"] .left-rail-more:hover,
+body[data-shell="atelier"] .left-rail-more[aria-expanded="true"] {
+  color: var(--ink-mute, var(--muted));
+  background: rgba(240, 220, 180, 0.03);
+}
+body[data-shell="atelier"] .left-rail-system-items .left-rail-item {
+  opacity: 0.85;
+}
+
+/* Palette / help / toast — warm umber contact, not cool black slabs */
+body[data-shell="atelier"] .desk-overlay-backdrop {
+  background: rgba(12, 9, 6, 0.58) !important;
+  backdrop-filter: none !important;
+}
+body[data-shell="atelier"] .desk-palette-shell,
+body[data-shell="atelier"] .desk-help {
+  box-shadow: var(--shadow-lg, 0 14px 36px rgba(10, 6, 3, 0.5)) !important;
+  border-radius: 3px !important;
+}
+body[data-shell="atelier"] .deck-toast,
+body[data-shell="atelier"] .dash-toast {
+  border-radius: 2px;
+  background: var(--wood-3, var(--panel-2));
+  border: 1px solid var(--border-2);
+  color: var(--ink, var(--text));
+  box-shadow: var(--shadow-md, 0 6px 18px rgba(12, 8, 4, 0.42));
+}
+
+/* Daily-path cool-white hover kill-switch (utility widgets on the stream) */
+body[data-shell="atelier"] .todo-item:hover,
+body[data-shell="atelier"] .bgterm-list-viewer__row:hover,
+body[data-shell="atelier"] .command-palette-item:hover {
+  background: rgba(240, 220, 180, 0.035) !important;
+}
+
+/* Flow panel paper-adjacent (keys/workflow stay wood tray, slightly lifted) */
+body[data-shell="atelier"] .deck-flow,
+body[data-shell="atelier"] .deck-shortcuts-panel {
+  background: var(--paper-0, var(--wood-3, var(--panel)));
+  border-color: var(--border);
+  box-shadow: var(--shadow-tray, none);
+}
+body[data-shell="atelier"] .deck-flow-step {
+  color: var(--brass, var(--teal));
+  border-color: var(--brass-line, var(--border-2));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Residual craft — composer palette, settings drawer, viewers, search
+   (daily-path instruments that still read as SaaS utility)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Sidebar search = recessed paper field on wood rail */
+body[data-shell="atelier"] .sidebar-search-input {
+  border-radius: 2px;
+  background: var(--wood-1, var(--bg));
+  border-color: var(--border);
+  color: var(--ink, var(--text));
+  font-family: var(--sans);
+}
+body[data-shell="atelier"] .sidebar-search-input:focus {
+  border-color: var(--brass-line, var(--brass, var(--teal)));
+  background: color-mix(in srgb, var(--brass) 6%, var(--wood-1, var(--bg)));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass) 18%, transparent);
+  outline: none;
+}
+
+/* Slash command palette — wood tray above composer paper */
+body[data-shell="atelier"] .slash-palette {
+  border-radius: 2px;
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border-2);
+  box-shadow: var(--shadow-md, 0 6px 18px rgba(12, 8, 4, 0.42));
+}
+body[data-shell="atelier"] .slash-palette-item {
+  border-bottom-color: var(--border);
+  color: var(--ink, var(--text));
+}
+body[data-shell="atelier"] .slash-palette-item:hover,
+body[data-shell="atelier"] .slash-palette-item.is-active {
+  background: var(--brass-wash, color-mix(in srgb, var(--brass) 12%, var(--panel)));
+}
+body[data-shell="atelier"] .slash-palette-item .sp-name {
+  color: var(--brass, var(--teal));
+  font-weight: 500;
+}
+body[data-shell="atelier"] .slash-palette-item .sp-badge--skill {
+  color: var(--brass, var(--teal));
+  border-color: var(--brass-line, var(--border));
+  background: var(--brass-wash, transparent);
+  border-radius: 2px;
+}
+
+/* Legacy command palette (if still used) */
+body[data-shell="atelier"] .command-palette {
+  border-radius: 2px;
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border-2);
+  box-shadow: var(--shadow-lg, 0 14px 36px rgba(10, 6, 3, 0.5));
+}
+body[data-shell="atelier"] .command-palette-item:hover {
+  background: var(--brass-wash, rgba(201, 166, 106, 0.12));
+}
+
+/* Per-conversation settings drawer — wood plate, warm dim */
+body[data-shell="atelier"] .chat-settings-drawer-backdrop {
+  background: rgba(12, 9, 6, 0.55);
+  backdrop-filter: none;
+}
+body[data-shell="atelier"] .chat-settings-drawer-card {
+  background: var(--wood-2, var(--bg-soft));
+  border-left: 1px solid var(--border);
+  box-shadow: -10px 0 28px rgba(10, 6, 3, 0.45);
+}
+body[data-shell="atelier"] .sd-head {
+  background: var(--wood-3, var(--panel));
+  border-bottom-color: var(--border);
+  box-shadow: var(--shadow-sm, none);
+}
+body[data-shell="atelier"] .sd-title {
+  color: var(--ink, var(--text));
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+body[data-shell="atelier"] .sd-section-title {
+  color: var(--ink-faint, var(--dim));
+  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.1em;
+}
+body[data-shell="atelier"] .sd-notice {
+  border-radius: 2px;
+  border-style: solid;
+  border-color: var(--border-2);
+  background: var(--paper-0, var(--panel-2));
+  color: var(--ochre, var(--amber));
+}
+body[data-shell="atelier"] .sd-body input,
+body[data-shell="atelier"] .sd-body select,
+body[data-shell="atelier"] .sd-body textarea {
+  border-radius: 2px;
+  background: var(--wood-1, var(--bg));
+  border: 1px solid var(--border);
+  color: var(--ink, var(--text));
+}
+body[data-shell="atelier"] .sd-body input:focus,
+body[data-shell="atelier"] .sd-body select:focus,
+body[data-shell="atelier"] .sd-body textarea:focus {
+  border-color: var(--brass-line, var(--brass));
+  outline: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass) 18%, transparent);
+}
+
+/* Background terminal viewer + payload modal — instrument glass, not SaaS sheet */
+body[data-shell="atelier"] .bgterm-viewer,
+body[data-shell="atelier"] .payload-modal,
+body[data-shell="atelier"] .payload-modal-card {
+  border-radius: 2px !important;
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border-2);
+  box-shadow: var(--shadow-lg, 0 14px 36px rgba(10, 6, 3, 0.5));
+}
+body[data-shell="atelier"] .bgterm-viewer__head,
+body[data-shell="atelier"] .payload-modal-head,
+body[data-shell="atelier"] .payload-section-head {
+  background: var(--wood-2, var(--bg-soft));
+  border-bottom: 1px solid var(--border);
+}
+body[data-shell="atelier"] .bgterm-viewer__status--running {
+  color: var(--brass, var(--teal));
+}
+body[data-shell="atelier"] .bgterm-viewer__body {
+  background: var(--wood-1, var(--bg));
+  font-family: var(--mono);
+}
+
+/* MCP / system list cards — square trays */
+body[data-shell="atelier"] .mcp-card,
+body[data-shell="atelier"] .mcp-add-form,
+body[data-shell="atelier"] .mcp-empty {
+  border-radius: 2px !important;
+  box-shadow: var(--shadow-tray, none);
+  background: var(--wood-3, var(--panel));
+}
+body[data-shell="atelier"] .mcp-empty {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border);
+}
+
+/* Thinking pane already paper; reinforce brass-deep rule if base still blue */
+body[data-shell="atelier"] .thinking {
+  border-radius: 2px;
+  background: var(--paper-0, var(--panel));
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--brass-deep, var(--brass, var(--teal)));
+  box-shadow: var(--shadow-tray, none);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Settings deep craft + tool status ink + rail primary spine
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Settings = wood subnav tray + paper content well */
+body[data-shell="atelier"] .settings-shell {
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .settings-subnav {
+  background: var(--wood-2, var(--bg-soft));
+  border-right: 1px solid var(--border);
+  box-shadow: var(--shadow-sm, none);
+}
+body[data-shell="atelier"] .settings-subnav__section-title {
+  color: var(--ink-faint, var(--dim));
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+body[data-shell="atelier"] .settings-subnav__item {
+  border-radius: 0;
+  border-left-width: 2px;
+  color: var(--ink-mute, var(--muted));
+  font-family: var(--sans);
+  font-size: 12.5px;
+}
+body[data-shell="atelier"] .settings-subnav__item:hover {
+  background: rgba(240, 220, 180, 0.035);
+  color: var(--ink, var(--text));
+}
+body[data-shell="atelier"] .settings-subnav__item--active {
+  color: var(--ink, var(--text));
+  background: var(--brass-wash, rgba(201, 166, 106, 0.12));
+  border-left-color: var(--brass, var(--teal));
+}
+body[data-shell="atelier"] .settings-content {
+  background: var(--wood-1, var(--bg));
+}
+body[data-shell="atelier"] .settings,
+body[data-shell="atelier"] .settings-content > .settings {
+  background: transparent;
+}
+body[data-shell="atelier"] .settings-title {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink, var(--text));
+}
+body[data-shell="atelier"] .settings label,
+body[data-shell="atelier"] .settings .field-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint, var(--dim));
+}
+body[data-shell="atelier"] .settings input,
+body[data-shell="atelier"] .settings select,
+body[data-shell="atelier"] .settings textarea {
+  border-radius: 2px;
+  background: var(--paper-1, var(--paper, var(--panel)));
+  border: 1px solid var(--border);
+  color: var(--ink, var(--text));
+}
+body[data-shell="atelier"] .settings input:focus,
+body[data-shell="atelier"] .settings select:focus,
+body[data-shell="atelier"] .settings textarea:focus {
+  border-color: var(--brass-line, var(--teal));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brass) 18%, transparent);
+  outline: none;
+}
+body[data-shell="atelier"] .settings-status {
+  border-radius: 2px;
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* Tool status inks — patina complete, ochre running, oxide failed */
+body[data-shell="atelier"] .tool-status--running {
+  color: var(--ochre, var(--amber));
+}
+body[data-shell="atelier"] .tool-status--completed {
+  color: var(--patina, var(--green));
+}
+body[data-shell="atelier"] .tool-status--failed {
+  color: var(--oxide, var(--red));
+}
+body[data-shell="atelier"] .tool-pill__body {
+  background: var(--paper-0, var(--bg));
+  border-top-color: var(--border);
+}
+body[data-shell="atelier"] .tool-pill-body__pre {
+  color: var(--ink-soft, var(--muted));
+}
+
+/* Primary rail spine separator */
+body[data-shell="atelier"] .left-rail-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--brass) 22%, transparent);
+}
+body[data-shell="atelier"] .left-rail-system {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+body[data-shell="atelier"] .left-rail-more {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+body[data-shell="atelier"] .left-rail-more-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+/* Chat settings drawer — paper tray, not glass modal */
+body[data-shell="atelier"] .chat-settings-drawer-backdrop {
+  background: rgba(12, 9, 6, 0.55);
+  backdrop-filter: none;
+}
+body[data-shell="atelier"] .chat-settings-drawer-card {
+  background: var(--wood-3, var(--panel));
+  border: 1px solid var(--border-2);
+  border-radius: 3px;
+  box-shadow: var(--shadow-lg, 0 14px 36px rgba(10, 6, 3, 0.5));
+}
+
+/* Cwd chip — stamped path, not badge */
+body[data-shell="atelier"] .chat-cwd-chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-mute, var(--muted));
+  background: var(--wood-1, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  max-width: min(42ch, 40vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm, none);
+}
+body[data-shell="atelier"] .chat-cwd-chip:hover {
+  color: var(--ink, var(--text));
+  border-color: var(--brass-line, var(--border-2));
+  background: color-mix(in srgb, var(--brass) 6%, var(--wood-1, var(--bg)));
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Final craft seal — kill remaining SaaS / cool / glass edges on atelier
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+body[data-shell="atelier"] .bgterm-viewer {
+  background: var(--wood-3, var(--panel)) !important;
+  border: 1px solid var(--border-2) !important;
+  border-left: 2px solid var(--brass) !important;
+  border-radius: 3px !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+body[data-shell="atelier"] .bgterm-viewer__title { color: var(--brass) !important; }
+body[data-shell="atelier"] .bgterm-viewer__head {
+  background: var(--wood-2, var(--bg-soft)) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+body[data-shell="atelier"] .trace-section {
+  background: var(--wood-3, var(--panel)) !important;
+  border-radius: 2px !important;
+  box-shadow: var(--shadow-tray) !important;
+}
+body[data-shell="atelier"] .trace-bar-fill,
+body[data-shell="atelier"] .trace-turn-bar-fill,
+body[data-shell="atelier"] .trace-tool-bar-fill {
+  background: var(--brass) !important;
+}
+
+body[data-shell="atelier"] .flow-totals__cell,
+body[data-shell="atelier"] .flow-stats,
+body[data-shell="atelier"] .flow-settings {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: color-mix(in srgb, var(--wood-3) 94%, transparent) !important;
+  border-radius: 3px !important;
+  box-shadow: var(--shadow-md) !important;
+}
+body[data-shell="atelier"] .flow-agent-node__dot--running {
+  background: var(--brass) !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+body[data-shell="atelier"] .thinking {
+  background: var(--paper-0) !important;
+  border-left: 2px solid var(--brass-deep) !important;
+  border-radius: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+body[data-shell="atelier"] .thinking-label,
+body[data-shell="atelier"] .thinking-dots {
+  color: var(--brass) !important;
+}
+
+/* Strip cool slate / coral strip washes → warm desk */
+body[data-shell="atelier"] .bgterms-strip {
+  background: linear-gradient(180deg, rgba(201, 166, 106, 0.05), transparent) !important;
+}
+body[data-shell="atelier"] .inflight-strip {
+  background: linear-gradient(180deg, rgba(212, 168, 90, 0.06), transparent) !important;
+}
+
+/* Toast / modal / overlay edge radii */
+body[data-shell="atelier"] .modal,
+body[data-shell="atelier"] .toast,
+body[data-shell="atelier"] .payload-modal,
+body[data-shell="atelier"] .changelog-modal,
+body[data-shell="atelier"] .update-modal {
+  border-radius: 3px !important;
+  background: var(--wood-3, var(--panel)) !important;
+  border-color: var(--border-2) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+}
+
+/* Status completed green → patina (already tool); stream status chips */
+body[data-shell="atelier"] .tool-status--completed,
+body[data-shell="atelier"] .status-pill--ok {
+  color: var(--patina, var(--green)) !important;
+}
+
+/* Kill any residual cool white hover still on daily widgets */
+body[data-shell="atelier"] .agent-item:hover,
+body[data-shell="atelier"] .tab:hover,
+body[data-shell="atelier"] .btn:hover:not(:disabled):not(.btn--primary),
+body[data-shell="atelier"] .composer-attach:hover,
+body[data-shell="atelier"] .composer-cancel:hover {
+  background: rgba(240, 220, 180, 0.04) !important;
+}
+
+/* Brand active / inflight dots square brass, no neon halo */
+body[data-shell="atelier"] .brand-active,
+body[data-shell="atelier"] .agent-inflight-dot,
+body[data-shell="atelier"] .tab-inflight-dot,
+body[data-shell="atelier"] .topbar-bg__dot {
+  border-radius: 1px !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+body[data-shell="atelier"] .agent-inflight-dot,
+body[data-shell="atelier"] .tab-inflight-dot,
+body[data-shell="atelier"] .topbar-bg__dot {
+  background: var(--brass) !important;
+}
+
+/* Lightbox close — brass plate, not soft pill */
+body[data-shell="atelier"] .image-lightbox__close {
+  border-radius: 2px !important;
+  background: var(--wood-3, var(--panel)) !important;
+  border-color: var(--brass-line, var(--border-2)) !important;
+  color: var(--ink, var(--text)) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+body[data-shell="atelier"] .image-lightbox__close:hover {
+  border-color: var(--brass) !important;
+  color: var(--brass-bright, var(--brass)) !important;
+  background: var(--wood-4, var(--panel-2)) !important;
+}
+
+/* Overlay backdrops — warm lamp dim only, never glass blur */
+body[data-shell="atelier"] .desk-overlay-backdrop,
+body[data-shell="atelier"] .drawer-backdrop,
+body[data-shell="atelier"] .payload-modal-backdrop,
+body[data-shell="atelier"] .image-lightbox {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Remote kind badge — slate ink, not API sky blue */
+body[data-shell="atelier"] .registry-item__kind-badge--remote {
+  color: var(--slate, #8a9eae) !important;
+  border-color: color-mix(in srgb, var(--slate, #8a9eae) 45%, var(--border)) !important;
+  background: color-mix(in srgb, var(--slate, #8a9eae) 10%, transparent) !important;
+}
+
+/* Update / voice error accents → oxide, not cool coral */
+body[data-shell="atelier"] .update-step__dot--fail,
+body[data-shell="atelier"] .composer-voice--error {
+  color: var(--oxide, var(--red)) !important;
+}
+body[data-shell="atelier"] .update-step__dot--fail {
+  background: var(--oxide, var(--red)) !important;
+}
+body[data-shell="atelier"] .update-step__dot--ok {
+  background: var(--brass, var(--teal)) !important;
+}
+
+/* Term toolbar mark — brass fixture, not teal chip */
+body[data-shell="atelier"] .term-toolbar-mark {
+  border-color: color-mix(in srgb, var(--brass) 35%, var(--border)) !important;
+  background: color-mix(in srgb, var(--brass) 8%, transparent) !important;
+  color: var(--brass) !important;
+  border-radius: 2px !important;
+}
+
+/* Flow idle dots → slate, not cool API blue */
+body[data-shell="atelier"] .flow-agent-node__dot--idle {
+  background: var(--slate, var(--blue)) !important;
+}
+body[data-shell="atelier"] .flow-agent-node__dot {
+  border-radius: 1px !important;
+}

@@ -1082,6 +1082,21 @@ export class AgentsSidebar {
     if (typeof this.onSelect === 'function') this.onSelect(id);
   }
 
+  /** j/k roster motion for desk keyboard on Chats surface */
+  moveSelection(delta: number): boolean {
+    const ids = this._visibleOrderedIds();
+    if (!ids.length) return false;
+    let idx = this.selectedId ? ids.indexOf(this.selectedId) : -1;
+    if (idx < 0) idx = delta > 0 ? -1 : 0;
+    const next = Math.max(0, Math.min(ids.length - 1, idx + delta));
+    const id = ids[next];
+    if (!id || id === this.selectedId) return false;
+    this.selectionAnchor = id;
+    this.multiSelection = new Set();
+    this.select(id);
+    return true;
+  }
+
   private _handleRowClick(agentId: string, ev: PointerEvent | MouseEvent): void {
     const modified = ev.ctrlKey || ev.metaKey || ev.shiftKey;
     if (!modified) {

@@ -1,0 +1,363 @@
+#!/usr/bin/env bash
+# gd — Grok Deck launcher (unified Dash + Terminal + Remote)
+set -euo pipefail
+ROOT="${GR_HOME:-/Users/sky/Projects/grok-remote-download}"
+export PATH="$HOME/.local/bin:$HOME/.grok/bin:$PATH"
+DEMOS_ROOT="${GROK_DECK_DEMOS:-$HOME/Projects/deck-demos}"
+API="http://127.0.0.1:7910"
+
+cmd="${1:-open}"
+shift || true
+
+ensure() {
+  if ! curl -fsS -m 2 "$API/api/health" >/dev/null 2>&1; then
+    echo "starting grok-remote…"
+    if command -v gr >/dev/null 2>&1; then
+      gr start --local 2>/dev/null || (cd "$ROOT" && pm2 start ecosystem.config.cjs)
+    else
+      (cd "$ROOT" && pm2 start ecosystem.config.cjs)
+    fi
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      sleep 0.4
+      curl -fsS -m 1 "$API/api/health" >/dev/null 2>&1 && break
+    done
+  fi
+}
+
+ensure_demo_dirs() {
+  mkdir -p "$DEMOS_ROOT"/{alpha,bravo,charlie}
+  for name in alpha bravo charlie; do
+    if [[ ! -x "$DEMOS_ROOT/$name/heartbeat.sh" ]]; then
+      cat > "$DEMOS_ROOT/$name/heartbeat.sh" <<'SH'
+#!/bin/zsh
+NAME="${1:-demo}"
+for i in {1..40}; do
+  printf '[%s] %s heartbeat %02d/40\n' "$(date +%H:%M:%S)" "$NAME" "$i"
+  sleep 15
+done
+echo "[$NAME] heartbeat complete"
+SH
+      chmod +x "$DEMOS_ROOT/$name/heartbeat.sh"
+    fi
+  done
+}
+
+case "$cmd" in
+  open|deck|"")
+    ensure
+    url="http://localhost:7910/#/deck"
+    echo "Grok Deck → $url"
+    if command -v open >/dev/null 2>&1; then open "$url"; else echo "$url"; fi
+    ;;
+  dash)
+    ensure
+    open "http://localhost:7910/#/dash" 2>/dev/null || true
+    echo "http://localhost:7910/#/dash"
+    ;;
+  term)
+    ensure
+    open "http://localhost:7910/#/term" 2>/dev/null || true
+    echo "http://localhost:7910/#/term"
+    ;;
+  chats|remote)
+    ensure
+    open "http://localhost:7910/#/chats" 2>/dev/null || true
+    echo "http://localhost:7910/#/chats"
+    ;;
+  status)
+    ensure
+    curl -sS "$API/api/deck/status" | python3 -m json.tool 2>/dev/null \
+      || curl -sS "$API/api/deck/status"
+    echo
+    gr status 2>/dev/null || true
+    echo
+    echo "agents:"
+    curl -sS "$API/api/agents" | python3 -c '
+import json,sys
+for a in json.load(sys.stdin):
+    name=a.get("name") or "?"
+    st=a.get("status") or "?"
+    conn="live" if a.get("connected") else "off"
+    infl=a.get("inFlight") or 0
+    print(f"  {name:18} {st:12} {conn:4} inFlight={infl}")
+' 2>/dev/null || true
+    ;;
+  demos)
+    ensure
+    curl -sS "$API/api/agents" | python3 -c "
+import json,sys
+agents=json.load(sys.stdin)
+demos=[a for a in agents if str(a.get('name','')).startswith('Deck')]
+if not demos:
+  print('No Deck demos running — try: gd ensure-demos')
+  raise SystemExit(1)
+for a in demos:
+  print('%s  %s  connected=%s  inFlight=%s  cwd=%s' % (
+    a.get('name'), a.get('status'), a.get('connected'), a.get('inFlight'), a.get('cwd')))
+"
+    open "http://localhost:7910/#/dash" 2>/dev/null || true
+    ;;
+  verify)
+    ensure
+    python3 - "$API" <<'PY'
+import json, sys, urllib.request
+
+api = sys.argv[1]
+
+def get(path):
+    with urllib.request.urlopen(api + path, timeout=30) as r:
+        return json.load(r)
+
+def get_raw(path):
+    with urllib.request.urlopen(api + path, timeout=30) as r:
+        return r.read().decode(), r.headers
+
+errors = []
+st = get('/api/deck/status')
+remote = st.get('remote') or {}
+print('deck.remote:', json.dumps(remote))
+if not st.get('ok'):
+    errors.append('deck status not ok')
+agents = get('/api/agents')
+demos = [a for a in agents if str(a.get('name') or '').startswith('Deck ·')]
+print(f'demos found: {len(demos)} (total agents {len(agents)})')
+if len(demos) < 3:
+    errors.append(f'expected 3 Deck · demos, found {len(demos)}')
+
+need = {'Deck · Alpha', 'Deck · Bravo', 'Deck · Charlie'}
+have = {a.get('name') for a in demos}
+missing = need - have
+if missing:
+    errors.append(f'missing demos: {sorted(missing)}')
+
+for a in demos:
+    name = a.get('name')
+    print(f'— {name}')
+    print(f'  status={a.get("status")} connected={a.get("connected")} inFlight={a.get("inFlight")} err={a.get("lastError")}')
+    if not a.get('connected'):
+        errors.append(f'{name}: not connected')
+    if a.get('lastError'):
+        errors.append(f'{name}: lastError={a.get("lastError")}')
+    if a.get('archived'):
+        errors.append(f'{name}: archived')
+    aid = a['id']
+    try:
+        raw, headers = get_raw(f'/api/agents/{aid}/history?turns=12')
+        lines = [ln for ln in raw.splitlines() if ln.strip()]
+        print(f'  history_events={len(lines)} turns={headers.get("X-Total-Turns")}')
+        if len(lines) < 1:
+            errors.append(f'{name}: empty history (peek will be blank)')
+    except Exception as e:
+        errors.append(f'{name}: history failed: {e}')
+        print(f'  history FAIL {e}')
+
+# Heartbeat processes
+import subprocess
+ps = subprocess.check_output(['ps', 'aux'], text=True)
+beats = [ln for ln in ps.splitlines() if 'heartbeat.sh' in ln and 'grep' not in ln]
+print(f'heartbeat processes: {len(beats)}')
+for ln in beats:
+    print(' ', ' '.join(ln.split()[10:])[:100])
+if len(beats) < 1:
+    # not fatal if tools finished, but warn when demos claim running
+    running = [a for a in demos if a.get('status') == 'running' or (a.get('inFlight') or 0) > 0]
+    if running:
+        errors.append('demos report running but no heartbeat.sh processes')
+
+if errors:
+    print('\nVERIFY FAIL')
+    for e in errors:
+        print(' ✗', e)
+    sys.exit(1)
+print('\nVERIFY OK — 3 demos visible, connected, history peeks available')
+sys.exit(0)
+PY
+    ;;
+  ensure-demos|fix-demos)
+    ensure
+    ensure_demo_dirs
+    python3 - "$API" "$DEMOS_ROOT" <<'PY'
+import json, sys, time, urllib.request
+
+api, demos_root = sys.argv[1], sys.argv[2]
+
+def get(path):
+    with urllib.request.urlopen(api + path, timeout=30) as r:
+        return json.load(r)
+
+def req(method, path, body=None):
+    data = None if body is None else json.dumps(body).encode()
+    headers = {'Content-Type': 'application/json'} if body is not None else {}
+    r = urllib.request.Request(api + path, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(r, timeout=60) as resp:
+        return json.load(resp)
+
+wanted = [
+    ('Deck · Alpha', f'{demos_root}/alpha', 'Alpha'),
+    ('Deck · Bravo', f'{demos_root}/bravo', 'Bravo'),
+    ('Deck · Charlie', f'{demos_root}/charlie', 'Charlie'),
+]
+
+agents = get('/api/agents')
+by_name = {a.get('name'): a for a in agents}
+
+for name, cwd, label in wanted:
+    a = by_name.get(name)
+    if not a:
+        print('spawn', name)
+        a = req('POST', '/api/agents', {
+            'name': name,
+            'cwd': cwd,
+            'settings': {'model': 'grok-4.5', 'alwaysApprove': True},
+        })
+        by_name[name] = a
+        time.sleep(1.2)
+    aid = a['id']
+    # connect if needed
+    cur = get(f'/api/agents/{aid}')
+    if not cur.get('connected'):
+        print('connect', name)
+        try:
+            req('POST', f'/api/agents/{aid}/connect')
+        except Exception as e:
+            print('  connect warn', e)
+        time.sleep(1.5)
+    cur = get(f'/api/agents/{aid}')
+    # star for auto-reconnect
+    try:
+        req('PATCH', f'/api/agents/{aid}', {'starred': True, 'archived': False})
+    except Exception:
+        pass
+    # prompt heartbeat if idle / not working
+    if cur.get('status') in ('idle', 'disconnected', 'exited', None) or not (cur.get('inFlight') or 0):
+        if cur.get('status') != 'running' or not (cur.get('inFlight') or 0):
+            prompt = (
+                f'You are {name}, a polished Grok Deck demo agent. '
+                f'Run exactly this command with a long tool timeout and wait until it exits: '
+                f'bash ./heartbeat.sh {label}. Be concise — one short ack then run the command.'
+            )
+            print('prompt heartbeat', name)
+            try:
+                req('POST', f'/api/agents/{aid}/prompt', {'text': prompt})
+            except Exception as e:
+                print('  prompt warn', e)
+    else:
+        print('ok already active', name, cur.get('status'), 'inFlight', cur.get('inFlight'))
+
+time.sleep(4)
+agents = get('/api/agents')
+for a in agents:
+    if str(a.get('name','')).startswith('Deck'):
+        print('FINAL', a.get('name'), a.get('status'), 'conn', a.get('connected'), 'inflight', a.get('inFlight'))
+print(json.dumps(get('/api/deck/status').get('remote'), indent=2))
+PY
+    ;;
+  tui-demos)
+    # Open 3 interactive Terminal sessions + one dashboard for TUI roster visibility
+    ensure
+    ensure_demo_dirs
+    python3 - "$DEMOS_ROOT" <<'PY'
+import json, subprocess, sys
+from pathlib import Path
+
+demos_root = Path(sys.argv[1])
+home = Path.home()
+grok = home / '.local' / 'bin' / 'grok'
+if not grok.exists():
+    grok = home / '.grok' / 'bin' / 'grok'
+
+try:
+    import urllib.request
+    agents = json.load(urllib.request.urlopen('http://127.0.0.1:7910/api/agents', timeout=10))
+except Exception:
+    agents = []
+
+by_label = {}
+for a in agents:
+    name = str(a.get('name') or '')
+    if name.startswith('Deck · '):
+        by_label[name.split('·', 1)[1].strip().lower()] = a
+
+specs = [
+    ('alpha', 'Deck · Alpha'),
+    ('bravo', 'Deck · Bravo'),
+    ('charlie', 'Deck · Charlie'),
+]
+
+scripts = []
+for key, title in specs:
+    cwd = demos_root / key
+    a = by_label.get(key)
+    sid = (a or {}).get('sessionId') or (a or {}).get('lastSessionId')
+    # Fresh interactive TUI demos (resume of ACP-owned sessions can conflict).
+    # Keep names/paths aligned with web Deck demos for a single mental model.
+    prompt = (
+        f'You are {title} (TUI twin). '
+        f'Run exactly: bash ./heartbeat.sh {key.capitalize()} '
+        f'with a long tool timeout and wait until it exits. Be concise.'
+    )
+    cmd = (
+        f'export PATH="$HOME/.local/bin:$HOME/.grok/bin:$PATH"; '
+        f'cd {json.dumps(str(cwd))} && '
+        f'exec {json.dumps(str(grok))} --cwd {json.dumps(str(cwd))} '
+        f'--always-approve --permission-mode bypassPermissions {json.dumps(prompt)}'
+    )
+    scripts.append(cmd)
+    print(f'queue {title} cwd={cwd} remoteSession={sid}')
+
+play = home / 'local-agent-stack' / 'playground'
+if not play.is_dir():
+    play = home
+dash = (
+    f'export PATH="$HOME/.local/bin:$HOME/.grok/bin:$PATH"; '
+    f'cd {json.dumps(str(play))} && exec {json.dumps(str(grok))} dashboard'
+)
+scripts.append(dash)
+
+lines = ['tell application "Terminal"', 'activate']
+for cmd in scripts:
+    lines.append(f'do script {json.dumps(cmd)}')
+    lines.append('delay 0.5')
+lines.append('end tell')
+subprocess.run(['osascript', '-e', '\n'.join(lines)], check=False)
+print('Opened', len(scripts) - 1, 'TUI demo tabs + 1 dashboard')
+PY
+    ;;
+  grokterm)
+    ensure
+    curl -sS -X POST "$API/api/deck/launch" \
+      -H 'Content-Type: application/json' \
+      -d '{"target":"grokterm"}'
+    echo
+    ;;
+  tui|dashboard)
+    ensure
+    curl -sS -X POST "$API/api/deck/launch" \
+      -H 'Content-Type: application/json' \
+      -d '{"target":"grok-dashboard"}'
+    echo
+    ;;
+  help|-h|--help)
+    cat <<H
+gd — Grok Deck unified launcher
+
+  gd                open Deck home in browser
+  gd open           same
+  gd dash           open multi-agent Dash (peek/reply)
+  gd term           open embedded Terminal
+  gd chats          open Remote chats
+  gd status         deck + agents health
+  gd demos          list Deck · demos + open Dash
+  gd verify         thorough check of 3 demos + history peeks
+  gd ensure-demos   connect/spawn/star + heartbeat the 3 demos
+  gd tui-demos      open 3 TUI sessions + grok dashboard (Terminal)
+  gd grokterm       launch native GrokTerm
+  gd tui            launch native grok dashboard
+  gd help           this help
+H
+    ;;
+  *)
+    echo "unknown command: $cmd (try gd help)" >&2
+    exit 1
+    ;;
+esac

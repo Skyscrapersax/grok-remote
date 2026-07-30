@@ -37,6 +37,8 @@ import { copyToClipboard, serializeConversation, serializeResumeCommand } from '
 import { iconHtml } from '../lib/icons';
 import { fmtTokens } from '../lib/format';
 import { playIntro } from '../lib/intro-animation';
+import { VoiceSession, fetchVoiceStatus, type VoiceState } from '../lib/voice';
+import type { SurfaceKeyHandler } from '../lib/desk-keys.js';
 
 export class ChatView {
   static _toolsToggleWired: any;
@@ -110,9 +112,13 @@ export class ChatView {
   composerHint!: any;
   composerSend!: any;
   composerTa!: any;
+  composerVoiceBtn!: any;
   connectBtn!: any;
+  voiceSession!: VoiceSession | null;
+  voiceState!: VoiceState;
   convoSkillsStripEl!: any;
   copyConvoBtn!: any;
+  cwdChip!: HTMLButtonElement;
   currentAgent!: any;
   empty!: any;
   filesMounted!: any;
@@ -332,6 +338,11 @@ export class ChatView {
   }
 
   destroy() {
+    if (this.voiceSession) {
+      try { this.voiceSession.stop(); } catch { /* ignore */ }
+      this.voiceSession = null;
+      this.voiceState = 'idle';
+    }
     this._destroyChatSplit();
     this.closeStream();
     this._cancelChatIntro();
@@ -409,6 +420,20 @@ export class ChatView {
     }, 'copy');
     this.tokensPill = el('span', { class: 'tab-tokens', hidden: true });
     this.inflightPill = el('span', { class: 'tab-inflight', hidden: true });
+    // Desk path chip — muted reference cwd with click-to-copy (CHAT_TOPBAR_TODO).
+    this.cwdChip = el('button', {
+      class: 'chat-cwd-chip',
+      type: 'button',
+      hidden: true,
+      title: '',
+      'aria-label': 'working directory, click to copy',
+      onclick: async () => {
+        const path = this.currentAgent?.cwd;
+        if (!path) return;
+        const ok = await copyToClipboard(String(path));
+        if (ok) this.flashBtnLabel(this.cwdChip, 'copied');
+      },
+    });
     return el('nav', { class: 'tabs' },
       this.tabBtns.conversation,
       this.tabBtns.files,
@@ -416,6 +441,7 @@ export class ChatView {
       this.tabBtns.trace,
       this.tabBtns.flow,
       el('span', { class: 'tabs-spacer' }),
+      this.cwdChip,
       this.inflightPill,
       this.tokensPill,
       el('div', { class: 'tab-actions-group' },
@@ -425,6 +451,20 @@ export class ChatView {
         this.copyConvoBtn,
       ),
     );
+  }
+
+  _renderCwdChip() {
+    if (!this.cwdChip) return;
+    const cwd = this.currentAgent?.cwd ? String(this.currentAgent.cwd) : '';
+    if (!cwd) {
+      this.cwdChip.hidden = true;
+      this.cwdChip.textContent = '';
+      this.cwdChip.removeAttribute('title');
+      return;
+    }
+    this.cwdChip.hidden = false;
+    this.cwdChip.textContent = cwd;
+    this.cwdChip.title = cwd;
   }
 
   _renderInflightPill() {
@@ -529,6 +569,7 @@ export class ChatView {
     if (this.settingsDrawerOpen) this._updateSettingsNotice(a);
     this._renderTokensPill();
     this._renderInflightPill();
+    this._renderCwdChip();
   }
 
   _syncConnectBtn() {
@@ -645,6 +686,49 @@ export class ChatView {
     }
   }
 
+  /**
+   * Desk keyboard surface handler (nav mode).
+   * Does not steal keys while composer/editables are focused, except Escape
+   * (close settings drawer or blur). j/k move sidebar roster via desk event.
+   */
+  handleKey: SurfaceKeyHandler = (ev, ctx) => {
+    const key = ev.key;
+    const editable = ctx?.isEditableTarget?.(ev.target) ?? false;
+
+    if (key === 'Escape' || key === 'Esc') {
+      if (this.settingsDrawerOpen) {
+        this.closeSettingsDrawer();
+        return true;
+      }
+      if (editable && ev.target instanceof HTMLElement) {
+        try { ev.target.blur(); } catch { /* ignore */ }
+        return true;
+      }
+      try { this.composerTa?.blur?.(); } catch { /* ignore */ }
+      return true;
+    }
+
+    if (editable) return false;
+
+    if (key === 'j' || key === 'ArrowDown') {
+      document.dispatchEvent(new CustomEvent('grok-desk:sidebar-move', { detail: { delta: 1 } }));
+      return true;
+    }
+    if (key === 'k' || key === 'ArrowUp') {
+      document.dispatchEvent(new CustomEvent('grok-desk:sidebar-move', { detail: { delta: -1 } }));
+      return true;
+    }
+    if (key === 'Enter' || key === 'i' || key === 'a') {
+      try { this.composerTa?.focus?.(); } catch { /* ignore */ }
+      return true;
+    }
+    if (key === 'o' && this.agentId) {
+      this.focusConversation();
+      return true;
+    }
+    return false;
+  };
+
   // Back-compat alias for older call sites. New code should use
   // focusConversation().
   beginNewConversation() { this.focusConversation(); }
@@ -694,6 +778,16 @@ export class ChatView {
     debugBtn.hidden = true;
     this.composerDebugBtn = debugBtn;
 
+    const voiceBtn = el('button', {
+      class: 'btn btn--ghost composer-voice',
+      type: 'button',
+      title: 'Grok Voice — speech co-pilot that can delegate to this coding agent (same idea as GrokTerm)',
+      onclick: (ev: any) => { ev.preventDefault(); void this.toggleVoice(); },
+    }, 'voice');
+    this.composerVoiceBtn = voiceBtn;
+    this.voiceSession = null;
+    this.voiceState = 'idle';
+
     // Caption row used to show the slash-command hint after a commit.
     const hintCaption = el('div', { class: 'composer-hint hidden' });
 
@@ -713,12 +807,99 @@ export class ChatView {
       ta,
       el('div', { class: 'composer-actions' },
         attachBtn,
+        voiceBtn,
         debugBtn,
         fileInput,
         cancelBtn,
         sendBtn,
       ),
     );
+  }
+
+  _syncVoiceBtn() {
+    const btn = this.composerVoiceBtn as HTMLButtonElement | null;
+    if (!btn) return;
+    const st = this.voiceState || 'idle';
+    btn.classList.toggle('composer-voice--on', st === 'listening' || st === 'speaking' || st === 'connecting');
+    btn.classList.toggle('composer-voice--speaking', st === 'speaking');
+    btn.classList.toggle('composer-voice--error', st === 'error');
+    const labels: Record<string, string> = {
+      idle: 'voice',
+      connecting: 'voice…',
+      listening: 'voice ●',
+      speaking: 'voice ◈',
+      error: 'voice !',
+    };
+    btn.textContent = labels[st] || 'voice';
+    btn.title = st === 'idle'
+      ? 'Start Grok Voice (mic + speech co-pilot)'
+      : st === 'listening'
+        ? 'Listening — click to stop'
+        : st === 'speaking'
+          ? 'Speaking — click to stop'
+          : st === 'connecting'
+            ? 'Connecting to Grok Voice…'
+            : 'Voice error — click to retry';
+  }
+
+  async toggleVoice() {
+    if (this.voiceSession && this.voiceState !== 'idle' && this.voiceState !== 'error') {
+      this.voiceSession.stop();
+      this.voiceSession = null;
+      this.voiceState = 'idle';
+      this._syncVoiceBtn();
+      this.showToast('Voice off', 'ok');
+      return;
+    }
+
+    try {
+      const st = await fetchVoiceStatus();
+      if (!st.ok) {
+        this.showToast(st.hint || 'Voice auth missing — set XAI_API_KEY or run grok login', 'warn');
+        this.voiceState = 'error';
+        this._syncVoiceBtn();
+        return;
+      }
+    } catch {
+      this.showToast('Could not reach /api/voice/status', 'warn');
+      return;
+    }
+
+    const session = new VoiceSession({
+      agentId: this.agentId || null,
+      onState: (state, detail) => {
+        this.voiceState = state;
+        this._syncVoiceBtn();
+        if (state === 'error' && detail) this.showToast(detail, 'warn');
+      },
+      onTranscript: (role, text, final) => {
+        if (!final || !text) return;
+        // Light feedback only — coding agent transcript lives in the main SSE stream
+        if (role === 'user') {
+          this.showToast(`you: ${text.slice(0, 80)}${text.length > 80 ? '…' : ''}`, 'ok');
+        }
+      },
+      onTool: (info) => {
+        if (info.status === 'done' && info.name === 'delegate_to_agent') {
+          this.showToast('Delegated to coding agent', 'ok');
+        } else if (info.status === 'error') {
+          this.showToast(`Voice tool ${info.name} failed`, 'warn');
+        } else if (info.status === 'running') {
+          this.showToast(`Voice: ${info.name}…`, 'ok');
+        }
+      },
+      onError: (message) => this.showToast(message, 'warn'),
+    });
+    this.voiceSession = session;
+    try {
+      await session.start();
+      this.showToast('Voice on — speak to delegate coding work', 'ok');
+    } catch (err) {
+      this.voiceSession = null;
+      this.voiceState = 'error';
+      this._syncVoiceBtn();
+      this.showToast(err instanceof Error ? err.message : String(err), 'warn');
+    }
   }
 
   _attachComposerExtras() {
@@ -968,6 +1149,7 @@ export class ChatView {
       if (this.connectBtn)  this.connectBtn.hidden = true;
       if (this.tokensPill)  this.tokensPill.hidden = true;
       if (this.inflightPill) this.inflightPill.hidden = true;
+      if (this.cwdChip)     this.cwdChip.hidden = true;
       this.closeSettingsDrawer();
       return;
     }
@@ -987,12 +1169,14 @@ export class ChatView {
     this.currentAgent = agent;
     this.latestTotalTokens = (agent && agent.totalTokens) || null;
     if (switchingAgent) this._lastRenderedTokens = 0;
+    try { this.voiceSession?.setFocus(agent.id); } catch { /* ignore */ }
     this._startBgTerminalsPolling();
     this._setComposerEnabled(true);
     this.composerCancel.disabled = true;
     this._syncConnectBtn();
     this._renderTokensPill();
     this._renderInflightPill();
+    this._renderCwdChip();
     this._syncStarBtn();
 
     if (this.tabsState === 'files') {
@@ -1040,6 +1224,24 @@ export class ChatView {
 
   _playChatIntro() {
     if (this._chatIntroAbort) return;
+
+    // Atelier desk: quiet static empty state — no hole-to-GR figlet demo.
+    const isAtelier =
+      document.body.getAttribute('data-shell') === 'atelier' ||
+      document.documentElement.getAttribute('data-theme') === 'atelier';
+    if (isAtelier) {
+      // Keep a dummy abort handle so the gate `!this._chatIntroAbort` holds.
+      this._chatIntroAbort = new AbortController();
+      const wrapEl = el('div', { class: 'chat-intro chat-intro--desk' },
+        el('div', { class: 'chat-intro-desk-kicker' }, 'session'),
+        el('div', { class: 'chat-intro-desk-line' }, 'ready · type to begin'),
+        el('div', { class: 'chat-intro-desk-meta' }, 'ink on paper · ? for keys'),
+      );
+      this._chatIntroEl = wrapEl;
+      this.streamEl.replaceChildren(wrapEl);
+      return;
+    }
+
     const ctrl = new AbortController();
     this._chatIntroAbort = ctrl;
 
