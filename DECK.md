@@ -14,9 +14,11 @@ Default theme is **atelier**: **wood chassis · brass fittings · paper work**. 
 | [`docs/craft-desk-next-after-term-restore.md`](docs/craft-desk-next-after-term-restore.md) | Continuity + ops checklist |
 | `~/Projects/design-elevation/CRAFT-DESK-ELEVATION.md` | Material system, tokens, surface direction |
 
-**Sealed:** A1 commit · A3 settings atelier · A5 quick cycle · B1–B4 desk.json (hash + agent + chat chrome) · C2–C5 term restore · `verify:craft` / `verify:term` / `verify:all`.  
+**Sealed (local `main` @ `a7c2bbf`):** A1–A5 · B1–B4 · C2–C5 · FOUC-safe SW/HTML cache · `verify:craft` / `verify:term` / `verify:all` · control plane `desk-potential/scripts/verify-control-plane.sh`.  
 
-**Next immersion:** D1 Flow craft · D2 system surfaces · D4 demo peeks · optional `git push`.
+**Remote:** local `main` is **ahead of origin** — `git push` needs write access to `daniel-farina/grok-remote` (last attempt: 403 for `Skyscrapersax`).  
+
+**Next immersion:** D1 Flow craft · D2 system surfaces · D4 demo peeks · **push when credentials allow**.
 
 ### Settings / theme matrix (craft desk)
 
