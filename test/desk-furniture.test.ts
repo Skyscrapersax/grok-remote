@@ -35,6 +35,11 @@ const {
   rememberDeskTheme,
   getDeskTheme,
   rememberLastAgent,
+  getLastAgentId,
+  rememberChatTab,
+  getChatTab,
+  rememberToolsCollapsed,
+  getToolsCollapsed,
   rememberTermTabs,
   getTermTabs,
   rememberDashCollapsed,
@@ -104,7 +109,25 @@ test('last agent + term tabs persist', () => {
   rememberTermTabs([{ kind: 'shell', cwd: '/tmp' }]);
   const d = loadDeskFurniture();
   assert.equal(d.lastAgentId, 'abc');
+  assert.equal(getLastAgentId(), 'abc');
   assert.equal(d.termTabs?.[0]?.kind, 'shell');
+});
+
+test('chatTab + toolsCollapsed persist (B4 chrome)', () => {
+  store.clear();
+  rememberChatTab('files');
+  rememberToolsCollapsed(true);
+  assert.equal(getChatTab(), 'files');
+  assert.equal(getToolsCollapsed(), true);
+  assert.equal(loadDeskFurniture().chatTab, 'files');
+  assert.equal(loadDeskFurniture().toolsCollapsed, true);
+  assert.equal(store.get('grok-remote.split.chat.collapsed'), '1');
+  rememberChatTab('not-a-tab'); // ignored
+  assert.equal(getChatTab(), 'files');
+  rememberToolsCollapsed(false);
+  assert.equal(getToolsCollapsed(), false);
+  rememberChatTab('info');
+  assert.equal(getChatTab(), 'info');
 });
 
 test('dash collapsed / group / search persist in desk.json', () => {

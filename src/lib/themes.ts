@@ -147,10 +147,22 @@ export function applyTheme(name: string): string {
   return n;
 }
 
+/**
+ * Topbar quick cycle — craft desk only.
+ * Full catalog remains available under Settings theme picker (A5).
+ */
+export const QUICK_THEME_CYCLE: readonly string[] = ['atelier', 'light', 'mocha'];
+
 export function nextTheme(current: string): string {
   const cur = isValid(current) ? current : getTheme();
-  const idx = NAMES.indexOf(cur);
-  const next = NAMES[(idx + 1) % NAMES.length] ?? DEFAULT_THEME;
+  const cycle = QUICK_THEME_CYCLE;
+  const idx = cycle.indexOf(cur);
+  // Unknown / carnival theme → snap back to atelier (no unicorn eject)
+  if (idx < 0) {
+    setTheme(DEFAULT_THEME);
+    return DEFAULT_THEME;
+  }
+  const next = cycle[(idx + 1) % cycle.length] ?? DEFAULT_THEME;
   setTheme(next);
   return next;
 }

@@ -81,20 +81,23 @@ test('applyTheme normalizes unknown themes to default before writing', () => {
   assert.equal(docDataset.theme, 'atelier');
 });
 
-test('nextTheme cycles through the registry in declaration order', () => {
+test('nextTheme uses atelier-first quick cycle (not full carnival)', () => {
   store.clear();
   store.set('grok-remote.theme', 'atelier');
-  assert.equal(themes.nextTheme('atelier'),  'dark');
-  assert.equal(themes.nextTheme('dark'),     'light');
-  assert.equal(themes.nextTheme('light'),    'hacker');
-  assert.equal(themes.nextTheme('hacker'),   'unicorn');
-  assert.equal(themes.nextTheme('unicorn'),  'nebula');
-  assert.equal(themes.nextTheme('nebula'),   'aurora');
-  assert.equal(themes.nextTheme('aurora'),   'sunset');
-  assert.equal(themes.nextTheme('sunset'),   'midnight');
-  assert.equal(themes.nextTheme('midnight'), 'carbon');
-  assert.equal(themes.nextTheme('carbon'),   'mocha');
-  assert.equal(themes.nextTheme('mocha'),    'atelier');
+  assert.equal(themes.nextTheme('atelier'), 'light');
+  assert.equal(themes.nextTheme('light'), 'mocha');
+  assert.equal(themes.nextTheme('mocha'), 'atelier');
+});
+
+test('nextTheme snaps carnival themes back to atelier', () => {
+  store.clear();
+  store.set('grok-remote.theme', 'unicorn');
+  assert.equal(themes.nextTheme('unicorn'), 'atelier');
+  assert.equal(themes.nextTheme('hacker'), 'atelier');
+});
+
+test('QUICK_THEME_CYCLE is craft-only', () => {
+  assert.deepEqual([...themes.QUICK_THEME_CYCLE], ['atelier', 'light', 'mocha']);
 });
 
 test('getThemeMeta returns the matching theme record', () => {

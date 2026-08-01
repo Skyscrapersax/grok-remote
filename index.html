@@ -8,6 +8,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Grok Deck" />
     <title>Grok Deck</title>
+    <!-- Critical paint: atelier wood before CSS/fonts load (A4′ FOUC). -->
+    <style>
+      html, body { background: #161310; color: #f0e8d8; margin: 0; }
+      body { min-height: 100dvh; }
+    </style>
     <!-- Self-hosted IBM Plex (local desk — no Google CDN) -->
     <link rel="stylesheet" href="/fonts/fonts.css" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23161310%22/><rect x=%2242%22 y=%2242%22 width=%2216%22 height=%2216%22 fill=%22%23c9a66a%22/></svg>" />
@@ -16,7 +21,7 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body data-shell="atelier">
-    <div class="scanlines" aria-hidden="true"></div>
+    <div class="scanlines" aria-hidden="true" hidden></div>
 
     <header class="topbar">
       <button class="topbar-panel-btn topbar-panel-btn--left" id="topbar-sidebar-left" type="button" title="toggle conversations sidebar" aria-label="toggle conversations sidebar" hidden></button>

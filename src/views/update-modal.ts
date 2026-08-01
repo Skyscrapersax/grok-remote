@@ -90,7 +90,7 @@ export function openUpdateModal({ current, latest }: UpdateModalOptions = {}): {
 
   const card = el('div', { class: 'update-modal__card' },
     el('div', { class: 'update-modal__head' },
-      el('div', { class: 'update-modal__title' }, 'updating grok-remote'),
+      el('div', { class: 'update-modal__title' }, 'updating Grok Deck'),
       closeBtn,
     ),
     headerSummary,

@@ -62,7 +62,7 @@ function updateBanner(): void {
       if (label) label.textContent = 'Install: tap Share, then Add to Home Screen.';
       if (installBtn) installBtn.textContent = 'Got it';
     } else {
-      if (label) label.textContent = 'Install Grok Remote as an app.';
+      if (label) label.textContent = 'Install Grok Deck as an app.';
       if (installBtn) installBtn.textContent = 'Install';
     }
   } else {
@@ -142,9 +142,43 @@ export function registerPwa(): void {
     const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
     if (location.protocol === 'https:' || isLocal) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {
-          // swallow; SW registration is best-effort.
-        });
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((reg) => {
+            // Pull an updated SW immediately when a new build ships.
+            void reg.update().catch(() => {});
+            // If a waiting worker exists (stale shell), activate it now.
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+            reg.addEventListener('updatefound', () => {
+              const nw = reg.installing;
+              if (!nw) return;
+              nw.addEventListener('statechange', () => {
+                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New SW ready — reload once so HTML matches hashed assets.
+                  try {
+                    if (!sessionStorage.getItem('gr-sw-reloaded')) {
+                      sessionStorage.setItem('gr-sw-reloaded', '1');
+                      location.reload();
+                    }
+                  } catch {
+                    location.reload();
+                  }
+                }
+              });
+            });
+          })
+          .catch(() => {
+            // swallow; SW registration is best-effort.
+          });
+
+        // Clear one-shot reload flag after a successful controlled load.
+        navigator.serviceWorker.ready.then(() => {
+          try {
+            sessionStorage.removeItem('gr-sw-reloaded');
+          } catch { /* ignore */ }
+        }).catch(() => {});
       });
     }
   }

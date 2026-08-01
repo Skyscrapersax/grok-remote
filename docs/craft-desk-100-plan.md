@@ -2,7 +2,8 @@
 
 **Date:** 2026-07-30  
 **Project:** `grok-remote-download` (Grok Deck @ `http://127.0.0.1:7910`)  
-**Status:** Daily-path craft ~95% visual; overall craft-desk feel ~82% (non-durable until commit)
+**Status:** Craft stack + desk continuity (B4 agent/chat chrome) + A5 theme cycle + verify gates. Overall ~92% daily path.  
+**Post–term-restore plan:** [`craft-desk-next-after-term-restore.md`](./craft-desk-next-after-term-restore.md)
 
 ### Vision sources (authoritative)
 
@@ -46,21 +47,22 @@
 | Chat keys (Esc / i / j·k / cwd chip) | Live (`desk-keys` + `ChatView.handleKey`) |
 | Light continuity | Browser `desk-furniture` (last hash + rail “more”) only |
 | Demo fleet | `Deck · Alpha|Bravo|Charlie` |
-| Server default theme | **Drift:** `lib/settings.ts` still `theme: 'dark'` |
-| Client default theme | `DEFAULT_THEME = 'atelier'` in `src/lib/themes.ts` |
+| Server default theme | `atelier` + `craftThemeAligned` |
+| Client default theme | `DEFAULT_THEME = 'atelier'`; topbar cycle atelier/light/mocha |
 | Term native fallback | Implemented (`native: true` → macOS Terminal) |
-| Term PTY restore after restart | **Missing** (no intent persistence) |
-| Git durability | **0%** until A1 |
+| Term PTY restore after restart | **Live** (`termTabs` dual-write + hydrate) |
+| Routing restore | **Live** (`lastHash` + `lastAgentId` + chat chrome) |
+| Git durability | Local commits on `main` (push optional) |
 
 **Rough completion**
 
 | Slice | ~% |
 |-------|-----|
-| Daily-path visual | 95% |
-| Secondary surfaces (Flow / system / ops) | 60–70% |
-| Continuity (`desk.json`) | 40% (local hash only) |
-| Identity durability (git) | 0% |
-| **Overall craft-desk feel** | **~82%** |
+| Daily-path visual | 96% |
+| Secondary surfaces (Flow / system / ops) | 65–75% |
+| Continuity (`desk.json`) | 95% |
+| Identity durability (git) | 90% local / push open |
+| **Overall craft-desk feel** | **~92%** |
 
 ---
 

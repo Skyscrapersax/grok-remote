@@ -25,6 +25,7 @@ import {
   getDeskTheme,
   bootstrapDesk,
   rememberLastAgent,
+  getLastAgentId,
   rememberDeskSplit,
 } from './lib/desk-furniture.js';
 import {
@@ -475,6 +476,27 @@ function mountDashboard(): void {
   });
 
   let activeSettings = false;
+  /** One-shot cold-open restore of lastAgentId from desk.json (B4). */
+  let agentRestoreDone = false;
+
+  function tryRestoreLastAgent(
+    sb: AgentsSidebar,
+    nav: (hash: string) => void,
+  ): void {
+    if (agentRestoreDone) return;
+    const id = getLastAgentId();
+    if (!id) {
+      agentRestoreDone = true;
+      return;
+    }
+    const found = sb.agents.find((a: Agent) => a.id === id);
+    if (!found) return; // roster may still be loading
+    agentRestoreDone = true;
+    const route = parseRoute();
+    if (route.name === 'chat' && route.agentId === id) return;
+    if (route.name !== 'home') return;
+    nav(`#/agents/${encodeURIComponent(id)}`);
+  }
 
   function unmountActiveSystemPage(): void {
     if (!activeSystemPage) return;
@@ -574,6 +596,7 @@ function mountDashboard(): void {
       return;
     }
     if (route.name === 'chat') {
+      agentRestoreDone = true; // already on a conversation — don't re-bounce
       chat.mount(mainHost);
       const found = sidebar.agents.find((a: Agent) => a.id === route.agentId);
       if (found) {
@@ -598,11 +621,19 @@ function mountDashboard(): void {
       bindSurfaceKeys('chat');
       return;
     }
-    // home / chats — global chords + chat surface (Esc drawer, focus composer)
+    // home / chats — one-shot lastAgentId restore (B4) before empty chat shell
     chat.mount(mainHost);
     chat.setAgent(null);
     bindSurfaceKeys('chat');
+    tryRestoreLastAgent(sidebar, navigate);
   }
+
+  // After agents first load, retry last-agent restore (roster empty at first paint).
+  document.addEventListener('grok-remote:agents-refresh', () => {
+    if (agentRestoreDone) return;
+    const route = parseRoute();
+    if (route.name === 'home') tryRestoreLastAgent(sidebar, navigate);
+  });
 
   window.addEventListener('hashchange', () => {
     rememberDeskHash(location.hash);
@@ -621,7 +652,14 @@ function mountDashboard(): void {
 document.addEventListener('DOMContentLoaded', () => {
   // Pull server desk.json into local cache, then restore last surface hash.
   restoreDeskHashIfEmpty(); // local cache first for instant paint
-  void bootstrapDesk(); // server desk.json then re-apply hash if needed
+  void bootstrapDesk().then(() => {
+    // Server desk may have a fresher lastHash / lastAgentId than local.
+    restoreDeskHashIfEmpty();
+    // If still on bare #/chats after hash restore, agent restore runs via renderRoute.
+    if (!location.hash || location.hash === '#' || location.hash === '#/') {
+      restoreDeskHashIfEmpty();
+    }
+  });
   void pingHello();
   void syncThemeFromServer();
   setInterval(() => { void pingHello(); }, 10000);

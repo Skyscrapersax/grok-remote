@@ -60,6 +60,7 @@ const MIME: Record<string, string> = {
   '.mjs':  'text/javascript; charset=utf-8',
   '.css':  'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg':  'image/svg+xml',
   '.png':  'image/png',
   '.jpg':  'image/jpeg',
@@ -70,6 +71,26 @@ const MIME: Record<string, string> = {
   '.woff2':'font/woff2',
   '.ttf':  'font/ttf',
 };
+
+/** Cache policy for static files — HTML must never stick to deleted asset hashes. */
+function staticCacheControl(relPath: string): string {
+  const p = relPath.split('?')[0] || '/';
+  if (p === '/sw.js' || p.endsWith('/sw.js')) {
+    return 'no-cache, no-store, must-revalidate';
+  }
+  if (p === '/' || p === '/index.html' || p.endsWith('.html')) {
+    return 'no-cache, must-revalidate';
+  }
+  // Vite content-hashed bundles under /assets/
+  if (p.startsWith('/assets/')) {
+    return 'public, max-age=31536000, immutable';
+  }
+  // Self-hosted fonts + icons
+  if (p.startsWith('/fonts/') || p.endsWith('.woff2') || p.endsWith('.woff') || p.endsWith('.png')) {
+    return 'public, max-age=604800';
+  }
+  return 'public, max-age=300';
+}
 
 const manager = new AgentManager();
 const terms = new TermHost();
@@ -106,16 +127,41 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
   const url = decodeURIComponent((req.url || '/').split('?')[0] || '/');
   const rel = url === '/' ? '/index.html' : url;
   let target = safeJoin(DIST, rel);
-  if (!target || !fs.existsSync(target) || fs.statSync(target).isDirectory()) {
+  let servedRel = rel;
+  const missing =
+    !target || !fs.existsSync(target) || fs.statSync(target).isDirectory();
+
+  if (missing) {
+    // Never SPA-fallback hashed assets / static files to index.html.
+    // Returning HTML as application/javascript blanks the app after a rebuild
+    // when a stale shell still references old Vite hashes.
+    const looksLikeFile =
+      path.extname(rel) !== '' ||
+      rel.startsWith('/assets/') ||
+      rel.startsWith('/fonts/');
+    if (looksLikeFile) {
+      res.writeHead(404, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      res.end(`not found: ${rel}\n`);
+      return;
+    }
+    // Client-side router: only bare paths fall back to the shell.
     target = path.join(DIST, 'index.html');
+    servedRel = '/index.html';
   }
-  if (!fs.existsSync(target)) {
+
+  if (!target || !fs.existsSync(target)) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('grok-remote: dist/ not built yet. Run `npm run build` (or `npm run install:setup`).\n');
     return;
   }
   const ext = path.extname(target).toLowerCase();
-  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+  res.writeHead(200, {
+    'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Cache-Control': staticCacheControl(servedRel),
+  });
   fs.createReadStream(target).pipe(res);
 }
 

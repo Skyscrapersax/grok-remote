@@ -200,6 +200,7 @@ export function installDeskOverlays(root: HTMLElement = document.body): DeskOver
       { id: 'deck', title: 'Deck' },
       { id: 'dash', title: 'Dash' },
       { id: 'term', title: 'Terminal' },
+      { id: 'chat', title: 'Chats' },
     ];
     helpBody.replaceChildren();
     for (const g of groups) {

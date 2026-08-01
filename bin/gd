@@ -337,6 +337,14 @@ PY
       -d '{"target":"grok-dashboard"}'
     echo
     ;;
+  verify-craft|verify-all)
+    ensure
+    (cd "$ROOT" && npm run verify:craft)
+    if [[ "$cmd" == "verify-all" ]]; then
+      (cd "$ROOT" && npm run verify:term) || true
+      "$0" verify
+    fi
+    ;;
   help|-h|--help)
     cat <<H
 gd — Grok Deck unified launcher
@@ -349,6 +357,8 @@ gd — Grok Deck unified launcher
   gd status         deck + agents health
   gd demos          list Deck · demos + open Dash
   gd verify         thorough check of 3 demos + history peeks
+  gd verify-craft   static craft gates + theme/settings matrix
+  gd verify-all     craft + term restore + demo verify
   gd ensure-demos   connect/spawn/star + heartbeat the 3 demos
   gd tui-demos      open 3 TUI sessions + grok dashboard (Terminal)
   gd grokterm       launch native GrokTerm

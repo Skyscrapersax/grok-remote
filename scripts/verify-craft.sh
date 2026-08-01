@@ -64,6 +64,21 @@ for f in src/lib/desk-furniture.ts src/lib/desk-keys.ts src/styles/premium.css l
   if [[ -f "$f" ]]; then ok "present $f"; else bad "missing $f"; fi
 done
 
+# A5: topbar cycle must be craft-only (not full THEMES carnival)
+if grep -E "QUICK_THEME_CYCLE" src/lib/themes.ts >/dev/null 2>&1 \
+  && grep -E "atelier.*light.*mocha|atelier', 'light', 'mocha" src/lib/themes.ts >/dev/null 2>&1; then
+  ok "QUICK_THEME_CYCLE craft-only (atelier/light/mocha)"
+else
+  bad "missing QUICK_THEME_CYCLE atelier-first cycle in themes.ts"
+fi
+
+# B4 furniture helpers present
+if grep -E "function rememberChatTab|function getToolsCollapsed|function getLastAgentId" src/lib/desk-furniture.ts >/dev/null 2>&1; then
+  ok "B4 chat chrome + lastAgent helpers present"
+else
+  bad "B4 desk furniture helpers missing"
+fi
+
 if curl -fsS -m 2 http://127.0.0.1:7910/api/health >/dev/null 2>&1; then
   ok "live /api/health"
   th=$(curl -fsS -m 2 http://127.0.0.1:7910/api/settings 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("theme",""))' 2>/dev/null || true)
@@ -74,10 +89,34 @@ if curl -fsS -m 2 http://127.0.0.1:7910/api/health >/dev/null 2>&1; then
   else
     ok "live settings.theme=$th"
   fi
+  # Settings matrix: aligned flag should not leave dark as canonical
+  aligned=$(curl -fsS -m 2 http://127.0.0.1:7910/api/settings 2>/dev/null | python3 -c 'import json,sys; s=json.load(sys.stdin); print(s.get("craftThemeAligned",""))' 2>/dev/null || true)
+  if [[ "$aligned" == "True" || "$aligned" == "true" || "$aligned" == "1" ]]; then
+    ok "live craftThemeAligned=$aligned"
+  else
+    say "  note craftThemeAligned=$aligned (optional field)"
+  fi
   if curl -fsS -m 2 http://127.0.0.1:7910/api/desk >/dev/null 2>&1; then
     ok "live GET /api/desk"
+    dth=$(curl -fsS -m 2 http://127.0.0.1:7910/api/desk 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print((d.get("desk") or {}).get("theme",""))' 2>/dev/null || true)
+    if [[ -z "$dth" ]]; then
+      say "  note desk.theme empty (ok if never set)"
+    elif [[ "$dth" == "dark" ]]; then
+      bad "desk.json theme still dark"
+    else
+      ok "live desk.theme=$dth"
+    fi
   else
     bad "live GET /api/desk failed"
+  fi
+  # On-disk settings if present
+  if [[ -f "$HOME/.grok-remote/settings.json" ]]; then
+    fth=$(python3 -c 'import json; print(json.load(open("'"$HOME"'/.grok-remote/settings.json")).get("theme",""))' 2>/dev/null || true)
+    if [[ "$fth" == "dark" ]]; then
+      bad "~/.grok-remote/settings.json theme still dark"
+    else
+      ok "on-disk settings.theme=${fth:-unset}"
+    fi
   fi
 else
   say "  skip live host (not running on :7910)"

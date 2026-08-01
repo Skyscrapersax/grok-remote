@@ -110,10 +110,10 @@ export const DESK_BINDINGS: DeskBinding[] = [
   { keys: 'ctrl-shift-tab', description: 'Previous tab', group: 'term', surface: 'term' },
 
   // Chat (nav mode — editable targets keep ordinary typing)
-  { keys: 'j / k', description: 'Next / previous session in sidebar', group: 'global', surface: 'chat' },
-  { keys: 'enter / i / a', description: 'Focus composer (insert)', group: 'global', surface: 'chat' },
-  { keys: 'o', description: 'Focus conversation pane', group: 'global', surface: 'chat' },
-  { keys: 'esc', description: 'Blur composer / leave insert', group: 'global', surface: 'chat' },
+  { keys: 'j / k', description: 'Next / previous session in sidebar', group: 'chat', surface: 'chat' },
+  { keys: 'enter / i / a', description: 'Focus composer (insert)', group: 'chat', surface: 'chat' },
+  { keys: 'o', description: 'Focus conversation pane', group: 'chat', surface: 'chat' },
+  { keys: 'esc', description: 'Blur composer / leave insert · close drawer', group: 'chat', surface: 'chat' },
 ];
 
 export function isEditableTarget(t: EventTarget | null): boolean {

@@ -39,6 +39,12 @@ import { fmtTokens } from '../lib/format';
 import { playIntro } from '../lib/intro-animation';
 import { VoiceSession, fetchVoiceStatus, type VoiceState } from '../lib/voice';
 import type { SurfaceKeyHandler } from '../lib/desk-keys.js';
+import {
+  rememberChatTab,
+  getChatTab,
+  rememberToolsCollapsed,
+  getToolsCollapsed,
+} from '../lib/desk-furniture.js';
 
 export class ChatView {
   static _toolsToggleWired: any;
@@ -335,6 +341,16 @@ export class ChatView {
     document.dispatchEvent(new CustomEvent('grok-remote:tools-state', {
       detail: { collapsed: !!this._chatSplitCollapsed },
     }));
+    // Restore last chat chrome tab from desk.json (B4)
+    this.restoreChatChrome();
+  }
+
+  /** Apply desk-persisted chatTab (and keep tools state already applied in split init). */
+  restoreChatChrome(): void {
+    const tab = getChatTab();
+    if (tab && tab !== this.tabsState) {
+      this.switchTab(tab, { persist: false });
+    }
   }
 
   destroy() {
@@ -609,8 +625,11 @@ export class ChatView {
     }, 1200);
   }
 
-  switchTab(key: any) {
+  switchTab(key: any, opts: { persist?: boolean } = {}) {
     this.tabsState = key;
+    if (opts.persist !== false) {
+      rememberChatTab(String(key || 'conversation'));
+    }
     for (const [k, btn] of Object.entries(this.tabBtns)) {
       (btn as any).classList.toggle('tab--active', k === key);
     }
@@ -679,6 +698,7 @@ export class ChatView {
   // (AgentsSidebar.onSelect) so picking any chat from the list always
   // lands the user looking at the messages, not a leftover Files/Flow
   // tab or a wide tools column from a previous agent.
+  // Does not fight cold-boot restore: only use on explicit user select.
   focusConversation() {
     this.switchTab('conversation');
     if (!this._isChatMobile() && !this._chatSplitCollapsed) {
@@ -1952,8 +1972,8 @@ export class ChatView {
     }
     if (this._splitToggleBtn) this._splitToggleBtn.hidden = false;
 
-    let collapsed = false;
-    try { collapsed = localStorage.getItem(ChatView.CHAT_SPLIT_COLLAPSED_KEY) === '1'; } catch { /* ignore */ }
+    // Prefer desk.json toolsCollapsed (B4), fall back to legacy localStorage.
+    let collapsed = getToolsCollapsed();
     // Seed the cached "last sizes" from the currently active tab so an
     // expand-after-collapse comes back to the right width for that tab.
     this._chatSplitLastSizes = this._readChatSplitSizesForTab(this._toolsColTab);
@@ -2021,7 +2041,7 @@ export class ChatView {
     if (this._isChatMobile()) return;
     const next = !this._chatSplitCollapsed;
     this._chatSplitCollapsed = next;
-    try { localStorage.setItem(ChatView.CHAT_SPLIT_COLLAPSED_KEY, next ? '1' : '0'); } catch { /* ignore */ }
+    rememberToolsCollapsed(next);
     if (next) {
       this._destroyChatSplit();
     } else if (this._chatSplitBuild) {

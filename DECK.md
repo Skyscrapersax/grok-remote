@@ -4,21 +4,35 @@ One control plane that joins **Dash**, **Terminal**, **Grok Remote**, and **Grok
 
 ## Visual language (Atelier craft desk)
 
-Default theme is **atelier**: **wood chassis · brass fittings · paper work**. IBM Plex type, sharp 2–3px corners. No gradient wordmarks, neon glows, scanlines, or pill chrome. Optional themes (dark/hacker/unicorn/…) remain in the cycle picker for variety.
+Default theme is **atelier**: **wood chassis · brass fittings · paper work**. IBM Plex type, sharp 2–3px corners. No gradient wordmarks, neon glows, scanlines, or pill chrome. Topbar theme cycle is **atelier → light → mocha** only; full catalog (dark/hacker/unicorn/…) stays under **Settings**.
 
 ### Vision & 100% plan
 
 | Doc | Role |
 |-----|------|
-| [`docs/craft-desk-100-plan.md`](docs/craft-desk-100-plan.md) | **In-repo forward plan (phases A–D)** — execution source of truth |
-| `~/Projects/design-elevation/CRAFT-DESK-ELEVATION.md` | Material system, tokens, surface direction, acceptance checklist |
-| `~/Projects/design-elevation/CRAFT-DESK-100-PLAN.md` | Sibling plan draft (mirrored into `docs/craft-desk-100-plan.md`) |
+| [`docs/craft-desk-100-plan.md`](docs/craft-desk-100-plan.md) | Full phases A–D roadmap |
+| [`docs/craft-desk-next-after-term-restore.md`](docs/craft-desk-next-after-term-restore.md) | Continuity + ops checklist |
+| `~/Projects/design-elevation/CRAFT-DESK-ELEVATION.md` | Material system, tokens, surface direction |
 
-**Craft stack sealed (A1):** `139949f` (+ follow-ups `ff96cc3`, `fe5e6ca` for desk lastHash/tests).  
-**Settings drift (A3):** server + live `settings.theme=atelier` (`craftThemeAligned`).  
-**desk.json (B1–B3 core):** `lib/desk.ts` + client `desk-furniture` dual-write; live `~/.grok-remote/desk.json` via `GET/PATCH /api/desk`.  
+**Sealed:** A1 commit · A3 settings atelier · A5 quick cycle · B1–B4 desk.json (hash + agent + chat chrome) · C2–C5 term restore · `verify:craft` / `verify:term` / `verify:all`.  
 
-**Best next move:** Phase **B4** — routing restore: empty hash → `lastHash`, restore `lastAgentId` selection + chat tab / tools collapse on cold open.
+**Next immersion:** D1 Flow craft · D2 system surfaces · D4 demo peeks · optional `git push`.
+
+### Settings / theme matrix (craft desk)
+
+| Source | Expected |
+|--------|----------|
+| `lib/settings.ts` default | `theme: 'atelier'`, `craftThemeAligned: true` |
+| `~/.grok-remote/settings.json` | `atelier` after one-shot migrate from legacy `dark` |
+| `src/lib/themes.ts` `DEFAULT_THEME` | `atelier` |
+| Topbar `nextTheme` | `QUICK_THEME_CYCLE = atelier → light → mocha` |
+| Settings theme grid | Full `THEMES` catalog |
+| `localStorage` `grok-remote.theme` | mirrors active UI theme |
+| `desk.json` `theme` | dual-written with UI |
+| `index.html` `data-theme` / `data-shell` | `atelier` cold load |
+| `meta theme-color` | tracks active theme chrome |
+
+Verify: `npm run verify:craft` · `gd verify-craft` · full gate `npm run verify:all` / `gd verify-all`.
 
 - Tokens: `src/style.css` (`:root` + `[data-theme="atelier"]`) — wood/paper/ink/brass scales, warm shadows, lamp vignette.
 - Craft shell: `src/styles/premium.css` — trays, paper peek, brass CTAs, rail, chat paper stream, composer paper field.
@@ -60,6 +74,7 @@ Vim / tmux muscle memory is the default way to drive Deck, Dash, and Term. Imple
 | **Dash** `j/k` `Enter`/`o` `/` `n` `p` `x` `r` `gg`/`G` | Roster, search, dispatch, reply, cancel, rename |
 | **Term** `Ctrl-b` then `n/p` `c` `g` `d` `x` `1–9` | tmux-style prefix for tabs |
 | **Term** `Ctrl+Tab` · `Ctrl+Shift+T/W` | Next tab · new shell · close |
+| **Chats** `j/k` · `i`/`a`/`Enter` · `o` · `Esc` | Roster · insert · conversation · blur |
 
 Inside a focused xterm, ordinary keys go to the shell. Use the **Ctrl-b** prefix (or global `g …` / palette) for desk chrome.
 

@@ -357,6 +357,37 @@ export function getLastAgentId(): string | null {
   return typeof id === 'string' && id ? id : null;
 }
 
+const CHAT_TABS = new Set(['conversation', 'files', 'info', 'trace', 'flow']);
+
+export function rememberChatTab(tab: string | null | undefined): void {
+  const t = String(tab || '').trim();
+  if (!t || !CHAT_TABS.has(t)) return;
+  saveDeskFurniture({ chatTab: t });
+}
+
+export function getChatTab(): string {
+  const t = read().chatTab;
+  if (typeof t === 'string' && CHAT_TABS.has(t)) return t;
+  return 'conversation';
+}
+
+export function rememberToolsCollapsed(collapsed: boolean): void {
+  saveDeskFurniture({ toolsCollapsed: !!collapsed });
+  try {
+    localStorage.setItem('grok-remote.split.chat.collapsed', collapsed ? '1' : '0');
+  } catch { /* ignore */ }
+}
+
+export function getToolsCollapsed(): boolean {
+  const desk = read();
+  if (typeof desk.toolsCollapsed === 'boolean') return desk.toolsCollapsed;
+  try {
+    return localStorage.getItem('grok-remote.split.chat.collapsed') === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function rememberDeskSplit(sizes: number[], collapsed: boolean): void {
   saveDeskFurniture({
     split: { sizes: sizes.slice(0, 4), collapsed },
