@@ -22,3 +22,4 @@ experiments/*.log
 experiments/exp*-out.txt
 experiments/exp*-prompt.txt
 LOOP_LOG.md
+build/
