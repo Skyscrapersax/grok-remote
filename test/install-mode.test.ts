@@ -25,7 +25,7 @@ test('chooseModeFromInputs preserves non-interactive tailnet default', () => {
 
 test('bindHostForMode binds local installs to localhost only', () => {
   assert.equal(bindHostForMode('local'), '127.0.0.1');
-  assert.equal(bindHostForMode('tailnet'), '0.0.0.0');
+  assert.equal(bindHostForMode('tailnet'), '127.0.0.1');
 });
 
 test('pm2EnvForMode passes the computed bind host through to ecosystem config', () => {

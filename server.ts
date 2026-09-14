@@ -39,13 +39,16 @@ import { voiceAuthStatus } from './lib/voice-auth.js';
 import { attachVoiceProxy } from './lib/voice-proxy.js';
 import { TermHost } from './lib/term-host.js';
 import { attachTermProxy } from './lib/term-proxy.js';
+import { createWebAccess } from './lib/web-access.js';
 import { launchGrokTerm, launchGrokDashboard, launchMacTerminal, probeNative } from './lib/launch-native.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = __dirname;
+const ROOT = fs.existsSync(path.join(__dirname, 'package.json')) ? __dirname : path.dirname(__dirname);
 const DIST = path.join(ROOT, 'dist');
 const PORT = parseInt(process.env['PORT'] || '7910', 10);
-const HOST = process.env['HOST'] || '0.0.0.0';
+const HOST = process.env['HOST'] || '127.0.0.1';
+if (!['127.0.0.1', '::1', 'localhost'].includes(HOST)) throw new Error('Bind Grok Remote to loopback; use an HTTPS reverse proxy for remote access.');
+const access = createWebAccess(PORT);
 
 const APP_VERSION: string = (() => {
   try {
@@ -104,7 +107,7 @@ interface TailscaleIdentity {
 
 function safeJoin(base: string, rel: string): string | null {
   const target = path.resolve(base, '.' + rel);
-  if (!target.startsWith(base)) return null;
+  if (target !== base && !target.startsWith(base + path.sep)) return null;
   return target;
 }
 
@@ -207,11 +210,31 @@ function isNodeErr(err: unknown): err is NodeJS.ErrnoException {
 }
 
 async function handleApi(req: IncomingMessage, res: ServerResponse, url: string, method: string): Promise<void> {
+  if (url === '/api/permissions' && method === 'GET') {
+    sendJson(res, 200, { requests: pendingPermissions() }); return;
+  }
+  if (url === '/api/permissions/stream' && method === 'GET') {
+    sseHeaders(res);
+    const snapshot = () => sseWrite(res, { event: 'permissions', data: { requests: pendingPermissions() } });
+    snapshot(); manager.on('permissions_changed', snapshot);
+    const heartbeat = setInterval(() => ssePing(res), 15000);
+    res.on('close', () => { clearInterval(heartbeat); manager.off('permissions_changed', snapshot); });
+    return;
+  }
+  const permissionRoute = url.match(/^\/api\/permissions\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/);
+  if (permissionRoute && method === 'POST') {
+    const body = await readJsonBody(req, 2048) as { optionId?: unknown } | null;
+    if (!body || (body.optionId !== null && typeof body.optionId !== 'string')) { sendJson(res, 400, { ok: false, error: 'Choose an offered option or reject the request.' }); return; }
+    const host = manager.getRaw(permissionRoute[1]!)?.client?.permissionHost;
+    const accepted = host?.decide(permissionRoute[2]!, body.optionId) || false;
+    sendJson(res, accepted ? 200 : 409, { ok: accepted, ...(accepted ? {} : { error: 'Request expired, already resolved, or option was not offered.' }) }); return;
+  }
   if (url === '/api/hello' && method === 'GET') {
     const ts = tailscaleIdentity();
     sendJson(res, 200, {
       ok: true,
       app: 'grok-remote',
+      demo: process.env['GROK_REMOTE_DEMO'] === '1',
       version: APP_VERSION,
       message: 'remote up. agent endpoints land here soon.',
       now: new Date().toISOString(),
@@ -268,7 +291,6 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: string,
           const launched = launchMacTerminal(kind, cwd);
           if (launched.ok) {
             sendJson(res, 200, {
-              ok: true,
               native: true,
               fallback: true,
               ...launched,
@@ -786,6 +808,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: string,
       }
     }
     if (suffix === '/files/raw' && (method === 'GET' || method === 'HEAD')) {
+      res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'");
       handleFilesRaw(req, res, rec, method);
       return;
     }
@@ -1482,7 +1505,13 @@ function handleStream(req: IncomingMessage, res: ServerResponse, id: string): vo
   req.on('error', cleanup);
 }
 
+function pendingPermissions() {
+  return manager.list().flatMap(agent => (manager.getRaw(agent.id)?.client?.permissionHost.list() || []).map(request => ({ ...request, agentId: agent.id, agentName: agent.name })));
+}
+
 const server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  try { if (!await access.handle(req, res)) return; }
+  catch { if (!res.headersSent) res.writeHead(400); res.end('Invalid request.'); return; }
   const url = (req.url || '').split('?')[0] || '/';
   if (url.startsWith('/api/system/')) {
     try {
@@ -1506,37 +1535,28 @@ const server = http.createServer(async (req: IncomingMessage, res: ServerRespons
     }
     return;
   }
-  serveStatic(req, res);
+  try { serveStatic(req, res); }
+  catch { if (!res.headersSent) res.writeHead(400); res.end('Invalid file path.'); }
 });
 
 // Grok Voice: browser WS proxy → xAI Realtime + agent tools
-attachVoiceProxy(server, manager);
+attachVoiceProxy(server, manager, access.upgrade);
 // Embedded PTY terminals for Grok Deck
-attachTermProxy(server, terms);
+attachTermProxy(server, terms, access.upgrade);
+server.on('upgrade', (req, socket) => {
+  if (!['/api/voice/ws', '/api/term/ws'].includes((req.url || '').split('?')[0]!)) socket.destroy();
+});
 
 const retention = startRetentionTimer({ getSettings: loadSettings, manager: manager as never });
 
 server.listen(PORT, HOST, () => {
   const ts = tailscaleIdentity();
-  const where = ts?.dns ? `http://${ts.dns}:${PORT}` : `http://${HOST}:${PORT}`;
+  const where = process.env['GROK_REMOTE_ORIGIN'] || `http://127.0.0.1:${PORT}`;
   console.log(`[grok-remote] listening on ${HOST}:${PORT}`);
-  console.log(`[grok-remote] tailnet url: ${where}`);
+  console.log(`[grok-remote] open ${where} — access key: ~/.grok-remote/access-key`);
   console.log(`[grok-remote] voice: ${voiceAuthStatus().ok ? 'auth ready' : 'auth missing'} (${voiceAuthStatus().hint})`);
   console.log(`[grok-remote] deck: terminals + dash + native launchers ready`);
-  // Auto-reconnect starred (demo/operator) agents so Deck/Dash look live after restarts.
-  void (async () => {
-    const list = manager.list().filter((a: { starred?: boolean; archived?: boolean; connected?: boolean }) =>
-      !!a.starred && !a.archived && !a.connected);
-    for (const a of list) {
-      try {
-        await manager.connect(a.id);
-        console.log(`[grok-remote] reconnected starred agent ${a.name || a.id}`);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.log(`[grok-remote] reconnect skipped for ${a.name || a.id}: ${msg}`);
-      }
-    }
-  })();
+  // Restored sessions reconnect when their owner asks; server boot launches no agents.
 });
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
@@ -1550,6 +1570,7 @@ async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`[grok-remote] shutdown on ${signal}`);
+  access.close();
   try { terms.shutdownAll(); } catch { /* ignore */ }
   try { await manager.shutdownAll(); } catch { /* ignore */ }
   server.close(() => process.exit(0));

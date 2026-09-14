@@ -6,14 +6,14 @@ import assert from 'node:assert/strict';
 // resolves to our fake. The fake records construction args, exposes a fire()
 // hook the tests can use to dispatch named events, and records close() calls.
 
-type FakeListener = (ev: { data: string }) => void;
+type FakeListener = (ev: { data: string; lastEventId?: string }) => void;
 
 interface FakeES {
   url: string;
   readyState: number;
   listeners: Map<string, FakeListener[]>;
   addEventListener(name: string, fn: FakeListener): void;
-  fire(name: string, data: string): void;
+  fire(name: string, data: string, lastEventId?: string): void;
   close(): void;
 }
 
@@ -33,9 +33,9 @@ class FakeEventSource implements FakeES {
     if (!arr) { arr = []; this.listeners.set(name, arr); }
     arr.push(fn);
   }
-  fire(name: string, data: string): void {
+  fire(name: string, data: string, lastEventId = ''): void {
     const arr = this.listeners.get(name) || [];
-    for (const fn of arr) fn({ data });
+    for (const fn of arr) fn({ data, lastEventId });
   }
   close(): void {
     this.closed = true;
@@ -149,4 +149,17 @@ test('readyState reports 2 (CLOSED) when the underlying EventSource is gone', ()
   const h = openStream('/x');
   h.close();
   assert.equal(h.readyState(), 2);
+});
+
+test('history and reconnect replays do not duplicate already rendered chunks', () => {
+  const seenEventIds = new Set(['from-history']);
+  let count = 0;
+  const stream = openStream('/x', { seenEventIds, onAny: () => count++ });
+  lastInstance!.fire('agent_message_chunk', '{}', 'from-history');
+  lastInstance!.fire('agent_message_chunk', '{}', 'new');
+  lastInstance!.fire('agent_message_chunk', '{}', 'new');
+  seenEventIds.add('history-refreshed');
+  lastInstance!.fire('agent_message_chunk', '{}', 'history-refreshed');
+  assert.equal(count, 1);
+  stream.close();
 });

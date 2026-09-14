@@ -31,7 +31,7 @@ function safeJsonParse(data: WebSocket.RawData): unknown {
   }
 }
 
-export function attachVoiceProxy(server: HttpServer, manager: AgentManager): void {
+export function attachVoiceProxy(server: HttpServer, manager: AgentManager, authorize: (req: IncomingMessage, socket: Duplex) => boolean): void {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
@@ -41,6 +41,7 @@ export function attachVoiceProxy(server: HttpServer, manager: AgentManager): voi
       // Leave other upgrades alone (none today).
       return;
     }
+    if (!authorize(req, socket)) return;
     wss.handleUpgrade(req, socket, head, (client) => {
       wss.emit('connection', client, req);
     });

@@ -72,6 +72,7 @@ export class ChatView {
   _easedToolsRaf!: any;
   _easedToolsTarget!: any;
   _historyAll!: any;
+  _seenEventIds = new Set<string>();
   _inFlightMap!: any;
   _inFlightTimer!: any;
   _isReplaying!: any;
@@ -1459,9 +1460,13 @@ export class ChatView {
   async refreshHistory({ all = false, turns = 50 } = {}) {
     if (!this.agentId) return;
     this._historyAll = !!all;
+    const requestedAgent = this.agentId;
     try {
-      const hist: any = await api.history(this.agentId, { turns, all });
+      const hist: any = await api.history(requestedAgent, { turns, all });
+      if (this.agentId !== requestedAgent) return;
       const events: any[] = (hist && Array.isArray(hist.events)) ? hist.events : [];
+      this._seenEventIds.clear();
+      for (const ev of events.slice(-1000)) if (typeof ev.eventId === 'string') this._seenEventIds.add(ev.eventId);
       this.streamEl.replaceChildren();
       if (this.toolsStreamEl) this.toolsStreamEl.replaceChildren();
       this.turns = [];
@@ -1529,6 +1534,7 @@ export class ChatView {
     if (!this.agentId) return;
     this.showStatus('connecting...', 'idle');
     this.stream = openStream(`/api/agents/${encodeURIComponent(this.agentId)}/stream`, {
+      seenEventIds: this._seenEventIds,
       onOpen:  () => this.showStatus('connected', 'ok'),
       onError: () => this.showStatus('stream error · reconnecting', 'warn'),
       onAny:   (name, data) => this.handleEvent(name, data),
@@ -3115,8 +3121,9 @@ export class ChatView {
     const alwaysApproveCheckbox = el('input', {
       class: 'sd-checkbox',
       type: 'checkbox',
+      disabled: true,
     });
-    alwaysApproveCheckbox.checked = true;
+    alwaysApproveCheckbox.checked = false;
     fields.alwaysApprove = alwaysApproveCheckbox;
 
     // Wire dirty tracking on every interactive control.
@@ -3175,7 +3182,7 @@ export class ChatView {
         alwaysApproveCheckbox,
         el('span', { class: 'sd-toggle-text' }, 'always approve tool calls'),
         el('span', { class: 'sd-toggle-hint' },
-          'auto-approve every tool call (default on).'),
+          'off: review requested tools using the Requests button.'),
       ),
     );
 
@@ -3281,8 +3288,7 @@ export class ChatView {
     } else {
       f.worktree.value = '';
     }
-    // alwaysApprove defaults to true if not set.
-    f.alwaysApprove.checked = !(s.alwaysApprove === false);
+    f.alwaysApprove.checked = false;
 
     // Reset the dirty flag now that the form mirrors the saved state.
     this._sdDirty = false;

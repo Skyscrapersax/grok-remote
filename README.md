@@ -10,6 +10,8 @@
 
 # grok-remote
 
+**Private-desk MVP:** start with [MVP.md](MVP.md) for the current install, authentication, approval and verification flow. The server now requires an access key, binds only to loopback, and reviews requested permissions once. Older unauthenticated HTTP/tailnet examples below are historical; use an HTTPS proxy and the exact configured origin for remote access.
+
 Run **grok agents** on one machine. Drive them from any device on your **tailnet**. Multiple conversations in parallel, a live web UI that streams every thought / tool call / response, durable on disk, reachable from your phone.
 
 One command sets it up. PM2 keeps the server alive. Tailscale handles the networking. The dashboard speaks the **Agent Client Protocol** (ACP) directly to `grok agent stdio`, so you see exactly what the agent sees and does in real time.

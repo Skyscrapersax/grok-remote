@@ -1,5 +1,7 @@
 node_modules/
 dist/
+build/
+.mvp/
 logs/
 .DS_Store
 .env

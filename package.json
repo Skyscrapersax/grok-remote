@@ -11,6 +11,8 @@
     "dev": "vite",
     "dev:server": "tsx watch server.ts",
     "test": "node --import tsx --test test/*.test.ts",
+    "test:mvp": "node --test test/private-desk.mjs",
+    "demo:mvp": "node scripts/private-desk-demo.mjs",
     "test:integration": "RUN_LOCAL_INTEGRATION=1 node --import tsx --test test/integration/*.test.ts",
     "verify:craft": "bash scripts/verify-craft.sh",
     "verify:all": "bash scripts/verify-craft.sh && bash scripts/verify-term-restore.sh",

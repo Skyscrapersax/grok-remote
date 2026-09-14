@@ -5,7 +5,7 @@ import type { Duplex } from 'node:stream';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { TermHost } from './term-host.js';
 
-export function attachTermProxy(server: HttpServer, host: TermHost): void {
+export function attachTermProxy(server: HttpServer, host: TermHost, authorize: (req: IncomingMessage, socket: Duplex) => boolean): void {
   const wss = new WebSocketServer({ noServer: true });
 
   // Chain with existing upgrade handlers (voice uses the same event).
@@ -13,6 +13,7 @@ export function attachTermProxy(server: HttpServer, host: TermHost): void {
     const url = req.url || '';
     const pathOnly = url.split('?')[0] || '';
     if (pathOnly !== '/api/term/ws') return;
+    if (!authorize(req, socket)) return;
     wss.handleUpgrade(req, socket, head, (client) => {
       wss.emit('connection', client, req);
     });

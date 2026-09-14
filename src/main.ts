@@ -4,6 +4,7 @@ import './styles/premium.css';
 import './styles/craft-layer.css';
 import Split from 'split.js';
 import { api } from './lib/api.js';
+import { installApprovals } from './lib/approvals.js';
 import { AgentsSidebar } from './views/agents.js';
 import { ChatView } from './views/chat.js';
 import { SettingsView } from './views/settings.js';
@@ -134,7 +135,8 @@ function setStatus(kind: string, text: string): void {
 
 async function pingHello(): Promise<void> {
   try {
-    const data = await api.hello() as { tailscale?: { backend?: string } };
+    const data = await api.hello() as { tailscale?: { backend?: string }; demo?: boolean };
+    if (data.demo) { setStatus('warn', 'fixture demo'); return; }
     const ts = data && data.tailscale;
     if (ts && ts.backend === 'Running') setStatus('ok', 'tailnet up');
     else if (ts) setStatus('warn', `tailscale: ${ts.backend || 'unknown'}`);
@@ -650,6 +652,7 @@ function mountDashboard(): void {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  installApprovals();
   // Pull server desk.json into local cache, then restore last surface hash.
   restoreDeskHashIfEmpty(); // local cache first for instant paint
   void bootstrapDesk().then(() => {

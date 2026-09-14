@@ -22,7 +22,7 @@ export interface Settings {
 const DEFAULTS: Settings = {
   defaultModel: null,
   defaultCwd: null,
-  autoApprove: true,
+  autoApprove: false,
   retentionDays: 30,
   /** Craft desk default — keep in sync with client themes.ts DEFAULT_THEME */
   theme: 'atelier',
@@ -56,7 +56,7 @@ export function load(): Settings {
   try {
     const raw = fs.readFileSync(FILE, 'utf8');
     const parsed = JSON.parse(raw) as Partial<Settings>;
-    return migrateTheme({ ...DEFAULTS, ...parsed });
+    return migrateTheme({ ...DEFAULTS, ...parsed, autoApprove: false });
   } catch {
     return { ...DEFAULTS };
   }
@@ -64,7 +64,7 @@ export function load(): Settings {
 
 export function save(next: Partial<Settings>): Settings {
   ensureRoot();
-  const merged: Settings = { ...load(), ...next, craftThemeAligned: true };
+  const merged: Settings = { ...load(), ...next, autoApprove: false, craftThemeAligned: true };
   fs.writeFileSync(FILE, JSON.stringify(merged, null, 2));
   return merged;
 }

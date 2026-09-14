@@ -9,7 +9,7 @@ const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'grok-desk-'));
 const ORIGINAL_HOME = process.env['HOME'];
 process.env['HOME'] = tmpHome;
 
-const { load, save, paths, loadDeskState, saveDeskState, deskPaths } = await import('../lib/desk.ts');
+const { load, save, paths, loadDeskState, saveDeskState, deskPaths } = await import('../lib/desk.js');
 
 test('desk load returns version 1 defaults when missing', () => {
   const d = load();

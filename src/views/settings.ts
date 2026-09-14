@@ -154,7 +154,7 @@ export class SettingsView {
     this.modelInput   = el('input', { class: 'inp', type: 'text', placeholder: 'grok-build' }) as HTMLInputElement;
     this.modelSelect  = null;
     this.cwdInput     = el('input', { class: 'inp', type: 'text', placeholder: '/path/to/working/dir' }) as HTMLInputElement;
-    this.autoApprove  = el('input', { type: 'checkbox' }) as HTMLInputElement;
+    this.autoApprove  = el('input', { type: 'checkbox', disabled: true }) as HTMLInputElement;
     this.debugToggle  = el('input', { type: 'checkbox' }) as HTMLInputElement;
     this.retentionInput = el('input', {
       class: 'inp inp--num', type: 'number', min: '0', max: '3650', step: '1', placeholder: '30',
@@ -186,7 +186,7 @@ export class SettingsView {
       this.field('auto-approve tools',
         el('label', { class: 'toggle' }, this.autoApprove,
           el('span', { class: 'toggle-text' }, 'on')),
-        'server already passes --always-approve. shown here for visibility.'),
+        'Off. Review tool requests using the Requests button; approvals apply once.'),
       this.field('debug controls',
         el('label', { class: 'toggle' }, this.debugToggle,
           el('span', { class: 'toggle-text' }, 'show developer affordances')),

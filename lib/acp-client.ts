@@ -1,7 +1,7 @@
 // One ACP client per grok agent stdio process.
 //
 // Responsibilities:
-//   - Spawn `grok agent --no-leader --always-approve stdio`.
+//   - Spawn `grok agent --no-leader stdio`; surface requested permissions.
 //   - Drive the handshake (initialize + session/new).
 //   - Read stdout line by line as JSON-RPC frames.
 //   - Resolve responses to our outgoing requests.
@@ -110,7 +110,7 @@ export class AcpClient extends EventEmitter {
 
     this.terminalHost = createTerminalHost({ getCwd: () => this.cwd });
     this.fsHost = createFsHost({ getCwd: () => this.cwd });
-    this.permissionHost = createPermissionHost();
+    this.permissionHost = createPermissionHost((event, detail) => this.emit('permission', { event, ...detail }));
   }
 
   private _buildArgv(): string[] {
@@ -155,9 +155,7 @@ export class AcpClient extends EventEmitter {
       top.push('-w');
     }
 
-    const alwaysApprove = s.alwaysApprove === false ? false : true;
     const agentFlags: string[] = ['agent', '--no-leader'];
-    if (alwaysApprove) agentFlags.push('--always-approve');
     agentFlags.push('stdio');
 
     return [...top, ...agentFlags];
@@ -183,6 +181,7 @@ export class AcpClient extends EventEmitter {
     });
 
     this.proc.on('exit', (code, signal) => {
+      this.permissionHost.cancelAll();
       this.exitInfo = { code, signal, at: Date.now() };
       this.setStatus('exited', { code, signal });
       this.emit('exit', this.exitInfo);
@@ -385,6 +384,7 @@ export class AcpClient extends EventEmitter {
   }
 
   async cancel(): Promise<{ cancelled: boolean; reason?: string; result?: unknown; fallback?: string; error?: string }> {
+    this.permissionHost.cancelAll();
     if (!this.sessionId) return { cancelled: false, reason: 'no session' };
     try {
       const result = await this.request('session/cancel', { sessionId: this.sessionId });
@@ -401,6 +401,7 @@ export class AcpClient extends EventEmitter {
   async shutdown(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
     if (this._closing) return;
     this._closing = true;
+    this.permissionHost.cancelAll();
     this.terminalHost.shutdownAll();
     if (this.proc && !this.proc.killed) {
       try { this.proc.kill(signal); } catch { /* ignore */ }

@@ -20,7 +20,7 @@ import {
   localUrlForPort,
   modeForLaunch,
   pm2ConfiguredHost,
-} from '../lib/launch.js';
+} from '../build/lib/launch.js';
 
 // ─── colors (match installer.js palette) ─────────────────────────────────
 const COLOR = !process.env.NO_COLOR && (
@@ -280,7 +280,7 @@ function installEnvForArgs(args = []) {
     return { ...process.env, GROK_REMOTE_HOST: '127.0.0.1' };
   }
   if (args.includes('--tailnet')) {
-    return { ...process.env, GROK_REMOTE_HOST: '0.0.0.0' };
+    return { ...process.env, GROK_REMOTE_HOST: '127.0.0.1' };
   }
   return process.env;
 }

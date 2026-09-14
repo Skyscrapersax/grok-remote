@@ -426,6 +426,11 @@ export class AgentManager extends EventEmitter {
     const client = record.client;
     if (!client) return;
 
+    client.on('permission', (detail: Record<string, unknown>) => {
+      emitEvent(String(detail['event']), detail);
+      this.emit('permissions_changed');
+    });
+
     client.on('status', (s: Record<string, unknown>) => {
       emitEvent('agent_status', s);
       this.emit('list_changed', {

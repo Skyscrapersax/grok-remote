@@ -13,7 +13,7 @@ export function modeFromArgs(args: string[] = []): InstallMode | null {
 }
 
 export function bindHostForMode(mode: InstallMode | string | null | undefined): string {
-  return mode === 'local' ? '127.0.0.1' : '0.0.0.0';
+  return '127.0.0.1'; // Tailnet access terminates HTTPS at Tailscale Serve, then proxies loopback.
 }
 
 export function pm2EnvForMode(

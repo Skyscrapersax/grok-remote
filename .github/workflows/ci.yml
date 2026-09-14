@@ -33,3 +33,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build server
+        run: npm run build:server
+
+      - name: Private desk acceptance
+        run: npm run test:mvp
+
+      - name: Isolated endpoint integration
+        run: npm run test:integration

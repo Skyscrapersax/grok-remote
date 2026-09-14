@@ -27,6 +27,7 @@ export type StreamEventName = (typeof KNOWN_EVENTS)[number] | 'message';
 export type StreamHandler = (parsed: unknown, ev: MessageEvent) => void;
 
 export interface StreamOptions {
+  seenEventIds?: Set<string>;
   onOpen?: () => void;
   onError?: (err: unknown) => void;
   onAny?: (name: StreamEventName, parsed: unknown, ev: MessageEvent) => void;
@@ -39,11 +40,23 @@ export interface StreamHandle {
   readyState(): number;
 }
 
-export function openStream(url: string, { onOpen, onError, onAny, on }: StreamOptions = {}): StreamHandle {
+export function openStream(url: string, { onOpen, onError, onAny, on, seenEventIds = new Set<string>() }: StreamOptions = {}): StreamHandle {
   let es: EventSource | null = null;
   let closed = false;
 
   const handlers: Partial<Record<StreamEventName, StreamHandler>> = { ...(on || {}) };
+  const deliver = (name: StreamEventName, ev: MessageEvent): void => {
+    if (ev.lastEventId) {
+      if (seenEventIds.has(ev.lastEventId)) return;
+      seenEventIds.add(ev.lastEventId);
+      if (seenEventIds.size > 1000) seenEventIds.delete(seenEventIds.values().next().value!);
+    }
+    let parsed: unknown = ev.data;
+    try { parsed = JSON.parse(ev.data); } catch { /* keep raw */ }
+    if (typeof onAny === 'function') onAny(name, parsed, ev);
+    const handler = handlers[name];
+    if (typeof handler === 'function') handler(parsed, ev);
+  };
 
   const attach = (source: EventSource): void => {
     source.addEventListener('open', () => {
@@ -54,19 +67,11 @@ export function openStream(url: string, { onOpen, onError, onAny, on }: StreamOp
     });
     for (const name of KNOWN_EVENTS) {
       source.addEventListener(name, (ev: MessageEvent) => {
-        let parsed: unknown = ev.data;
-        try { parsed = JSON.parse(ev.data); } catch { /* keep raw */ }
-        if (typeof onAny === 'function') onAny(name, parsed, ev);
-        const handler = handlers[name];
-        if (typeof handler === 'function') handler(parsed, ev);
+        deliver(name, ev);
       });
     }
     source.addEventListener('message', (ev: MessageEvent) => {
-      let parsed: unknown = ev.data;
-      try { parsed = JSON.parse(ev.data); } catch { /* keep raw */ }
-      if (typeof onAny === 'function') onAny('message', parsed, ev);
-      const handler = handlers['message'];
-      if (typeof handler === 'function') handler(parsed, ev);
+      deliver('message', ev);
     });
   };
 

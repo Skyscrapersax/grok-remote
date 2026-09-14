@@ -1,0 +1,11 @@
+.gr-approval-dialog{--text:#252720;--border-2:#606a57;box-sizing:border-box;width:min(640px,calc(100vw - 32px));max-height:85dvh;overflow:auto;padding:28px;border:1px solid #82907d;border-radius:12px;background:#f3efe6;color:#252720;font:16px/1.5 system-ui;box-shadow:0 20px 70px #0004}
+.gr-approval-dialog::backdrop{background:#1118}
+.gr-approval-dialog h2{font:30px Georgia,serif;margin-top:0}
+.gr-approval-card{border-top:1px solid #bac2b5;padding:14px 0}
+.gr-approval-card h3{overflow-wrap:anywhere}
+.gr-approval-card pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;background:#e8e4da;padding:12px;font:13px/1.5 monospace}
+.gr-approval-actions{display:flex;gap:12px;flex-wrap:wrap}
+.gr-approval-dialog button{min-height:44px;font:inherit}
+.gr-requests--pending{outline:2px solid #618154;outline-offset:2px}
+.topbar-right form{margin:0}
+@media(max-width:720px){.topbar-right .status{display:none}.topbar-right{gap:5px}.topbar-right .gr-requests,.topbar-right form .btn{padding:6px;font-size:12px;min-height:36px}.gr-approval-dialog{padding:20px}}

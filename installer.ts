@@ -465,8 +465,8 @@ async function stepResolveTailnetURL(): Promise<StepResult> {
     if (!dnsName && !ip) return { ok: false, detail: 'no tailscale identity found on this device' };
     ctx.tailnetDNS = dnsName;
     ctx.tailnetIP  = ip;
-    ctx.tailnetURL = dnsName ? `http://${dnsName}:${port}` : `http://${ip}:${port}`;
-    return { ok: true, detail: ctx.tailnetURL };
+    ctx.tailnetURL = process.env['GROK_REMOTE_ORIGIN'];
+    return { status: 'warn', detail: `Loopback listener. Configure Tailscale Serve HTTPS and GROK_REMOTE_ORIGIN before remote use; see MVP.md. Local port: ${port}.` };
   });
 }
 
@@ -486,6 +486,8 @@ async function stepBuildVite(): Promise<StepResult> {
   return step('build dashboard (vite build)', async () => {
     const r = await runCmd('npx', ['vite', 'build'], { cwd: HERE });
     if (!r.ok) return { ok: false, detail: 'vite build failed' };
+    const server = await runCmd('npm', ['run', 'build:server'], { cwd: HERE });
+    if (!server.ok) return { ok: false, detail: 'server build failed' };
     const out = r.stdout.split('\n').find((l) => l.includes('built in')) || 'built';
     return { ok: true, detail: out.trim() };
   });
