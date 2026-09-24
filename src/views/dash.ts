@@ -14,6 +14,7 @@ import {
   rememberDashGroupMode,
   rememberDashSearch,
 } from '../lib/desk-furniture.js';
+import { playDashMotion, staggerDashRows } from '../lib/shell-motion.js';
 
 export interface DashAgent {
   id: string;
@@ -269,6 +270,7 @@ export class DashView {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private es: EventSource | null = null;
   private peekLoading = false;
+  private rowsIntroPlayed = false;
 
   constructor() {
     this.onAgentsRefresh = (ev: Event) => {
@@ -514,6 +516,7 @@ export class DashView {
 
   mount(parent: HTMLElement): void {
     parent.appendChild(this.root);
+    playDashMotion(this.root);
     document.addEventListener('grok-remote:agents-refresh', this.onAgentsRefresh);
     this.openStream();
     void this.refresh();
@@ -730,6 +733,7 @@ export class DashView {
         }
         this.listEl.appendChild(section);
       }
+      this.staggerRowsOnce();
       return;
     }
 
@@ -771,6 +775,15 @@ export class DashView {
       this.listEl.appendChild(section);
     }
     if (!any) this.listEl.appendChild(this.emptyEl());
+    this.staggerRowsOnce();
+  }
+
+  private staggerRowsOnce(): void {
+    if (this.rowsIntroPlayed) return;
+    const rows = this.listEl.querySelectorAll('.dash-row');
+    if (!rows.length) return;
+    this.rowsIntroPlayed = true;
+    staggerDashRows(rows);
   }
 
   private emptyEl(): HTMLElement {

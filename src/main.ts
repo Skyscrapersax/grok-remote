@@ -38,6 +38,7 @@ import {
   defaultDeskCommands,
   installDeskOverlays,
 } from './lib/desk-overlays.js';
+import { playShellMotion } from './lib/shell-motion.js';
 
 interface Agent {
   id: string;
@@ -704,6 +705,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   installVersionFooter();
 });
+
+playShellMotion();
 
 const SIDEBAR_SIZES_KEY = 'grok-remote.split.sidebar';
 const SIDEBAR_COLLAPSED_KEY = 'grok-remote.split.sidebar.collapsed';
