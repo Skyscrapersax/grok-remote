@@ -5,6 +5,7 @@ import { el } from '../lib/render.js';
 import { api } from '../lib/api.js';
 import { fetchVoiceStatus } from '../lib/voice.js';
 import type { SurfaceKeyHandler } from '../lib/desk-keys.js';
+import { playDeckMotion } from '../lib/shell-motion.js';
 
 interface DeckStatus {
   ok?: boolean;
@@ -351,6 +352,7 @@ export class DeckView {
 
   mount(parent: HTMLElement): void {
     parent.appendChild(this.root);
+    playDeckMotion(this.root);
     void this.refresh();
     this.pulseTimer = setInterval(() => { void this.refresh(); }, 8000);
     // Prefer focus on deck for immediate keys without click

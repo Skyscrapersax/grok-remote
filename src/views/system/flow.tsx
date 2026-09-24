@@ -24,6 +24,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { motion } from 'motion/react';
+import { animated, useSpring } from '@react-spring/web';
+import { prefersReducedMotion } from '../../lib/shell-motion';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -262,14 +265,29 @@ const STATUS_RANK = {
 
 function AgentNode({ data }) {
   const status = normaliseStatus(data.status);
+  const reduce = prefersReducedMotion();
+  const spring = useSpring({
+    scale: status === 'running' ? 1.06 : 1,
+    immediate: reduce,
+  });
   const hist = Array.isArray(data.tokensHistory) ? data.tokensHistory : [];
   const sparkPath = (hist.length >= 2) ? buildSparkPath(hist, 120, 16) : null;
   return (
-    <div className={`flow-agent-node flow-agent-node--${status}`} data-depth={data.depth || 0}>
+    <animated.div
+      className={`flow-agent-node flow-agent-node--${status}`}
+      data-depth={data.depth || 0}
+      style={{ scale: spring.scale }}
+    >
       <Handle type="source" position={Position.Right} className="flow-handle" />
       <Handle type="target" position={Position.Right} className="flow-handle" />
       <Handle type="source" id="sub" position={Position.Left} className="flow-handle" />
       <Handle type="source" id="bg" position={Position.Bottom} className="flow-handle" />
+      <motion.div
+        className="flow-agent-node__label"
+        initial={reduce ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: reduce ? 0 : 0.35 }}
+      >
       <div className="flow-agent-node__row">
         <span className={`flow-agent-node__dot flow-agent-node__dot--${status}`} />
         <span className="flow-agent-node__name" title={data.name}>{data.name}</span>
@@ -297,7 +315,8 @@ function AgentNode({ data }) {
           <path d={sparkPath.line} fill="none" stroke="var(--teal)" strokeWidth="1.2" />
         </svg>
       )}
-    </div>
+      </motion.div>
+    </animated.div>
   );
 }
 

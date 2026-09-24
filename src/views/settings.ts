@@ -1,10 +1,13 @@
 // Settings view.
 
+import { createElement } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { api } from '../lib/api.js';
 import { el } from '../lib/render.js';
 import { iconHtml } from '../lib/icons.js';
-import { THEMES, getTheme, setTheme } from '../lib/themes.js';
+import { getTheme } from '../lib/themes.js';
 import { SETTINGS_SECTIONS, getSettingsPage } from './system/index';
+import { ThemePicker } from './theme-picker.js';
 
 function clampInt(raw: unknown, min: number, max: number, fallback: number): number {
   const n = parseInt(String(raw).trim(), 10);
@@ -46,11 +49,11 @@ export class SettingsView {
   debugToggle!: HTMLInputElement;
   retentionInput!: HTMLInputElement;
   themePicker!: HTMLElement;
+  private themeRoot: Root | null = null;
   statusEl!: HTMLElement;
   saveBtn!: HTMLButtonElement;
   reloadBtn!: HTMLButtonElement;
   modelFieldHost!: HTMLElement;
-  themeCards: Record<string, HTMLElement> = {};
 
   constructor() {
     this.settings = {};
@@ -209,12 +212,9 @@ export class SettingsView {
   }
 
   refreshThemePicker(): void {
-    const current = getTheme();
-    for (const [k, card] of Object.entries(this.themeCards || {})) {
-      card.classList.toggle('theme-card--selected', k === current);
-      const radio = card.querySelector('input[type="radio"]') as HTMLInputElement | null;
-      if (radio) radio.checked = (k === current);
-    }
+    window.dispatchEvent(new CustomEvent('grok-remote:theme-change', {
+      detail: { theme: getTheme() },
+    }));
   }
 
   async load(): Promise<void> {
@@ -317,33 +317,9 @@ export class SettingsView {
   }
 
   private _buildThemePicker(): HTMLElement {
-    const current = getTheme();
-    const grid = el('div', { class: 'theme-grid' }) as HTMLElement;
-    this.themeCards = {};
-    for (const t of THEMES) {
-      const isSel = t.name === current;
-      const card = el('label', {
-        class: `theme-card${isSel ? ' theme-card--selected' : ''}`,
-      },
-        el('input', {
-          type: 'radio',
-          name: 'theme',
-          value: t.name,
-          checked: isSel,
-          onchange: () => {
-            setTheme(t.name);
-            this.refreshThemePicker();
-            window.dispatchEvent(new CustomEvent('grok-remote:theme-change', {
-              detail: { theme: t.name },
-            }));
-          },
-        }),
-        el('span', { class: 'theme-card-swatch', style: `background: ${t.accent}` }),
-        el('span', { class: 'theme-card-label' }, t.label),
-      ) as HTMLElement;
-      this.themeCards[t.name] = card;
-      grid.appendChild(card);
-    }
-    return grid;
+    const host = el('div', { class: 'theme-picker-host' }) as HTMLElement;
+    this.themeRoot = createRoot(host);
+    this.themeRoot.render(createElement(ThemePicker));
+    return host;
   }
 }
